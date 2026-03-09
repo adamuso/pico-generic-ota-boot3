@@ -27,9 +27,26 @@ if(BOOT3_INJECT_MEMMAP)
         # 4 KiB for it. Define start/end symbols and ASSERT if actual contents
         # overflow the reserved area, then advance the location counter to the
         # end of the reserved area to effect padding.
-            set(_replace "\n    .boot3 : {\n      __boot3_start = .;\n        KEEP(*(.boot3.entry))\n        KEEP(*(.boot3))\n        __boot3_after = .;\n    } > FLASH\n\n    ASSERT(__boot3_after <= __boot3_start + 4096, \"boot3 section exceeds 4KiB\")\n    . = __boot3_start + 4096;\n    PROVIDE(__boot3_end = .);\n\n    .text . : {")
+        set(_replace "\n    .boot3 : {\n        __boot3_start__ = .;\n        KEEP(*(.boot3.entry))\n        KEEP(*(.boot3))\n    } > FLASH\n\n    .text . : {")
 
         string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_mem}")
+        
+        set(_pattern "\n    .text . : {")
+        set(_replace "\n    .boot3_critical : {\n        PROVIDE(__boot3_ram_start = .);\n        KEEP(*(.boot3.*))\n    } > RAM AT> FLASH\n\n\    __boot3_end__ = LOADADDR(.boot3_critical) + SIZEOF(.boot3_critical);\n    . = __boot3_end__;\n    . = ALIGN(4);\n\n    PROVIDE(__boot3_critical = LOADADDR(.boot3_critical));\n    PROVIDE(__boot3_critical_end = .);\n\n    .text . : {")
+        
+        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
+
+        set(_pattern "\n    .text . : {")
+        set(_replace "\n    ASSERT(__boot3_end__ - __boot3_start__ <= 4096, \"boot3 section exceeds 4KiB\")\n    . = __boot3_start__ + 4096;\n\n    .boot3_state_checksum . : {\n        PROVIDE(__boot3_state = .);\n        KEEP(*(.boot3_state.checksum))\n    }\n\n    .boot3_state_program_size . : {\n        KEEP(*(.boot3_state.program_size))\n    }\n\n    .boot3_state . : {\n        KEEP(*(.boot3_state.magic))\n        KEEP(*(.boot3_state.data))\n    } > FLASH\n\n    . = __boot3_start__ + 8192;\n    PROVIDE(__boot3_end = .);\n\n    .text . : {")
+        
+        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
+
+        set(_pattern "\n    .ram_vector_table (NOLOAD): {")
+        set(_replace "\n    . = ORIGIN(RAM);\n\n    .ram_vector_table . (NOLOAD): {")
+        # set(_replace "\n    . = ORIGIN(RAM);\n\n    .ram_vector_table . (NOLOAD): {")
+        
+        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
+
 
         if(NOT "${_mem}" STREQUAL "${_new_mem}")
             # write modified file into build dir (non-invasive)
@@ -46,6 +63,10 @@ endif()
 # Minimal interface library so other projects can do add_subdirectory(...) and link to `boot3`
 add_library(boot3 INTERFACE)
 target_compile_definitions(boot3 INTERFACE USE_BOOT3=1)
+target_include_directories(boot3 INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+)
 
 # Build the boot3 image (assembly + C) and attach it to the `boot3`
 # interface target so callers linking to `boot3` will automatically
@@ -54,7 +75,9 @@ target_compile_definitions(boot3 INTERFACE USE_BOOT3=1)
 # Add the local `src` directory and place its build output inside this
 # project's binary dir so it is correctly built when this project is
 # included via add_subdirectory(...) from other CMake projects.
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/boot3_src_build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tools/fnv1a_checksum)
 
 # The object library was created, expose its objects through the
 # `boot3` INTERFACE target so callers get the compiled .boot3 contents
@@ -81,5 +104,36 @@ function(pico_boot3_init TARGET)
             target_link_options(${TARGET} INTERFACE "-T${BOOT3_MEMMAP_INJECTED}")
         endif()
     endif()
-endfunction(pico_boot3_init)
 
+    # Generate checksum based on the produced .bin file. Create a file-based
+    # custom command that depends on the .bin (so it runs after the .bin is
+    # generated), and a custom target to include the checksum generation in the
+    # default build.
+    set(_flash_bin "${CMAKE_BINARY_DIR}/${TARGET}.bin")
+    set(_flash_checksum "${CMAKE_BINARY_DIR}/${TARGET}_checksum.bin")
+    set(_flash_program_size "${CMAKE_BINARY_DIR}/${TARGET}_program_size.bin")
+  
+    # add_custom_command(
+    #     OUTPUT ${_flash_checksum}
+    #     COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2000 > ${_flash_checksum}
+    #     DEPENDS boot3_fnv1a_checksum ${_flash_bin}
+    #     COMMENT "Generating checksum data for .boot3_state_checksum section..."
+    #     VERBATIM
+    # )
+
+    # add_custom_target(flash_checksum_for_${TARGET} ALL
+    #     DEPENDS ${_flash_checksum}
+    # )
+
+    # add_dependencies(flash_checksum_for_${TARGET} boot3_fnv1a_checksum)
+
+    add_custom_command(
+        TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${TARGET}> ${_flash_bin}
+        COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2100 > ${_flash_checksum}
+        COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2100 calc > ${_flash_program_size}
+        COMMAND ${CMAKE_OBJCOPY} --update-section .boot3_state_checksum=${_flash_checksum} --update-section .boot3_state_program_size=${_flash_program_size} $<TARGET_FILE:${TARGET}>
+        COMMENT "Updating .boot3_state_checksum section in final ELF with generated checksum..."
+        VERBATIM
+    )
+endfunction(pico_boot3_init)

@@ -11,20 +11,25 @@ endif()
 set(PICO_BOARD waveshare_rp2040_zero)
 
 include(${PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+set(PICO_FLASH_SIZE_BYTES "${PICO_FLASH_SIZE_BYTES} / 2")
+
+# If this example is configured on its own (out-of-tree relative to the
+# repository root) we must provide an explicit binary directory when
+# adding a source directory that lives outside this source dir.
+# Add the repository root so the `boot3` INTERFACE target is available.
+add_subdirectory(${CMAKE_SOURCE_DIR}/.. ${CMAKE_BINARY_DIR}/pico-ota-boot3)
 
 project(example_blink C CXX ASM)
 
 pico_sdk_init()
 
-## If this example is configured on its own (out-of-tree relative to the
-## repository root) we must provide an explicit binary directory when
-## adding a source directory that lives outside this source dir.
-## Add the repository root so the `boot3` INTERFACE target is available.
-add_subdirectory(${CMAKE_SOURCE_DIR}/.. ${CMAKE_BINARY_DIR}/rp2040_ota_bootloader_root_build)
-
 add_executable(bare_blink 
     ws2812.c
     main.c
+)
+
+target_compile_definitions(bare_blink PRIVATE
+    PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=5000
 )
 
 # Ensure the generated memmap with .boot3 is used by this target
