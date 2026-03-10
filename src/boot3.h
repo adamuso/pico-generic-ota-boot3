@@ -8,6 +8,7 @@
 #define in_boot3_section __attribute__((section(".boot3")))
 #define in_boot3_data __attribute__((section(".boot3.data")))
 #define in_boot3_critical_section __attribute__((section(".boot3.critical")))
+#define in_boot3_user_data __attribute__((section(".boot3_state.user_data")))
 
 #define BOOT3_STATE_MAGIC 0x553007B0
 
@@ -38,17 +39,23 @@ struct Boot3StateCopyProgress
     char data[2048];
 };
 
-struct Boot3StateData
+struct Boot3StateInternalData
 {
     struct Boot3StateConfig config;
-    char padding[2048 - sizeof(struct Boot3StateConfig) - sizeof(struct Boot3StatePrelude)];
-    struct Boot3StateCopyProgress progress;
+    char padding[1024 - sizeof(struct Boot3StateConfig) - sizeof(struct Boot3StatePrelude)];
 };
+
+static_assert(
+    sizeof(struct Boot3StatePrelude) + sizeof(struct Boot3StateInternalData) == 1024, 
+    "Boot3StatePrelude + Boot3StateInternalData must be exactly 1024 bytes to fit in the reserved space at the end of the boot3 section"
+);
 
 struct Boot3State 
 {
     struct Boot3StatePrelude prelude; 
-    struct Boot3StateData data;
+    struct Boot3StateInternalData data;
+    char user_data[1024];
+    struct Boot3StateCopyProgress progress;
 };
 
 static_assert(sizeof(struct Boot3State) == 4096, "Boot3State must be exactly 4096 bytes to fit in the reserved space at the end of the boot3 section");
@@ -60,3 +67,5 @@ static inline struct Boot3State *boot3_get_current_state() {
 static inline struct Boot3State *boot3_get_pending_state() {
     return (struct Boot3State *)(&__boot3_end - sizeof(struct Boot3State) + (PICO_FLASH_SIZE_BYTES / 2));
 }
+
+uint64_t in_boot3_section boot3_fnv1a_64(const uint8_t *data, size_t len);

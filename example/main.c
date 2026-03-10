@@ -10,26 +10,21 @@
 
 extern char __flash_binary_start, __flash_binary_end;
 
-#define FNV1A_64_OFFSET_BASIS 0xcbf29ce484222325ULL
-#define FNV1A_64_PRIME        0x00000100000001b3ULL
-
-extern uint64_t in_boot3_section fnv1a_64(const uint8_t *data, size_t len);
-
 int main(void) {
+    internal_ws2812_init();
+
+    internal_ws2812_reset();
+    internal_ws2812_transmit(0, 0, 255);
+
     stdio_init_all();
 
     printf("Hello, world!\n");
     printf("Program checksum: %llx\n", boot3_get_current_state()->prelude.checksum);
     printf("Pointers: %p %p %d\n", &__flash_binary_start, &__boot3_end, &__flash_binary_start - &__boot3_end);
-    printf("Calc checksum: %llx\n", fnv1a_64(&__boot3_end, boot3_get_current_state()->prelude.program_size));
+    printf("Calc checksum: %llx\n", boot3_fnv1a_64(&__boot3_end, boot3_get_current_state()->prelude.program_size));
     printf("Flash size: %u bytes\n", (uint32_t)(&__flash_binary_end - &__flash_binary_start));
     printf("Program size: %u bytes\n", boot3_get_current_state()->prelude.program_size);
     printf("Program magic: %x\n", boot3_get_current_state()->prelude.magic);
-
-    internal_ws2812_init();
-
-    internal_ws2812_reset();
-    internal_ws2812_transmit(0, 0, 255);
 
     // busy_wait_ms(2000);
 

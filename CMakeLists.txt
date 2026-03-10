@@ -27,26 +27,27 @@ if(BOOT3_INJECT_MEMMAP)
         # 4 KiB for it. Define start/end symbols and ASSERT if actual contents
         # overflow the reserved area, then advance the location counter to the
         # end of the reserved area to effect padding.
-        set(_replace "\n    .boot3 : {\n        __boot3_start__ = .;\n        KEEP(*(.boot3.entry))\n        KEEP(*(.boot3))\n    } > FLASH\n\n    .text . : {")
+        # set(_replace "\n    .boot3 : {\n        __boot3_start__ = .;\n        KEEP(*(.boot3.entry))\n        KEEP(*(.boot3))\n    } > FLASH\n\n    .text . : {")
 
+        # string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_mem}")
+        
+        # set(_pattern "\n    .text . : {")
+        # set(_replace "\n    .boot3_critical : {\n        PROVIDE(__boot3_ram_start = .);\n        KEEP(*(.boot3.*))\n    } > RAM AT> FLASH\n\n\    __boot3_end__ = LOADADDR(.boot3_critical) + SIZEOF(.boot3_critical);\n    . = __boot3_end__;\n    . = ALIGN(4);\n\n    PROVIDE(__boot3_critical = LOADADDR(.boot3_critical));\n    PROVIDE(__boot3_critical_end = .);\n\n    .text . : {")
+        
+        # string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
+
+        # set(_pattern "\n    .text . : {")
+        # set(_replace "\n    ASSERT(__boot3_end__ - __boot3_start__ <= 4096 - 256, \"boot3 section exceeds 4KiB\")\n    . = __boot3_start__ + 4096 - 256;\n\n    .boot3_state_checksum . : {\n        PROVIDE(__boot3_state = .);\n        KEEP(*(.boot3_state.checksum))\n    }\n\n    .boot3_state_program_size . : {\n        KEEP(*(.boot3_state.program_size))\n    }\n\n    .boot3_state . : {\n        KEEP(*(.boot3_state.magic))\n        KEEP(*(.boot3_state.data))\n    } > FLASH\n\n    . = __boot3_start__ + 8192 - 256;\n    PROVIDE(__boot3_end = .);\n\n    .text . : {")
+        
+        # string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
+
+        file(READ "${CMAKE_CURRENT_SOURCE_DIR}/boot3.ld" _replace)
         string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_mem}")
-        
-        set(_pattern "\n    .text . : {")
-        set(_replace "\n    .boot3_critical : {\n        PROVIDE(__boot3_ram_start = .);\n        KEEP(*(.boot3.*))\n    } > RAM AT> FLASH\n\n\    __boot3_end__ = LOADADDR(.boot3_critical) + SIZEOF(.boot3_critical);\n    . = __boot3_end__;\n    . = ALIGN(4);\n\n    PROVIDE(__boot3_critical = LOADADDR(.boot3_critical));\n    PROVIDE(__boot3_critical_end = .);\n\n    .text . : {")
-        
-        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
-
-        set(_pattern "\n    .text . : {")
-        set(_replace "\n    ASSERT(__boot3_end__ - __boot3_start__ <= 4096, \"boot3 section exceeds 4KiB\")\n    . = __boot3_start__ + 4096;\n\n    .boot3_state_checksum . : {\n        PROVIDE(__boot3_state = .);\n        KEEP(*(.boot3_state.checksum))\n    }\n\n    .boot3_state_program_size . : {\n        KEEP(*(.boot3_state.program_size))\n    }\n\n    .boot3_state . : {\n        KEEP(*(.boot3_state.magic))\n        KEEP(*(.boot3_state.data))\n    } > FLASH\n\n    . = __boot3_start__ + 8192;\n    PROVIDE(__boot3_end = .);\n\n    .text . : {")
-        
-        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
 
         set(_pattern "\n    .ram_vector_table (NOLOAD): {")
         set(_replace "\n    . = ORIGIN(RAM);\n\n    .ram_vector_table . (NOLOAD): {")
-        # set(_replace "\n    . = ORIGIN(RAM);\n\n    .ram_vector_table . (NOLOAD): {")
-        
-        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
 
+        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
 
         if(NOT "${_mem}" STREQUAL "${_new_mem}")
             # write modified file into build dir (non-invasive)
@@ -130,8 +131,8 @@ function(pico_boot3_init TARGET)
     add_custom_command(
         TARGET ${TARGET} POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${TARGET}> ${_flash_bin}
-        COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2100 > ${_flash_checksum}
-        COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2100 calc > ${_flash_program_size}
+        COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2000 > ${_flash_checksum}
+        COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2000 calc > ${_flash_program_size}
         COMMAND ${CMAKE_OBJCOPY} --update-section .boot3_state_checksum=${_flash_checksum} --update-section .boot3_state_program_size=${_flash_program_size} $<TARGET_FILE:${TARGET}>
         COMMENT "Updating .boot3_state_checksum section in final ELF with generated checksum..."
         VERBATIM

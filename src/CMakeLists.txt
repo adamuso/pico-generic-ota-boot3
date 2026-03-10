@@ -6,6 +6,7 @@
 add_library(boot3_image OBJECT
     boot3.S
     boot3.c
+    boot3_state.c
     flash.c
 )
 

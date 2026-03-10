@@ -15,23 +15,7 @@
 #define FNV1A_64_OFFSET_BASIS 0xcbf29ce484222325ULL
 #define FNV1A_64_PRIME        0x00000100000001b3ULL
 
-extern char __flash_binary_start, __flash_binary_end;
 
-const uint64_t boot3_checksum __attribute__((section(".boot3_state.checksum"))) = 0;
-const uint32_t boot3_program_size __attribute__((section(".boot3_state.program_size"))) = 0xFFFFFFFF;
-const uint32_t boot3_magic __attribute__((section(".boot3_state.magic"))) = BOOT3_STATE_MAGIC; 
-
-struct Boot3StateData boot3_current_state_data __attribute__((section(".boot3_state.data"))) = {
-    .config = {
-        .flash_binary_start = (uint8_t *)&__flash_binary_start,
-        .flash_binary_end = (uint8_t *)&__flash_binary_end,
-    },
-    // Initialize progress to all 0xFF, which is the erased state of flash, to distinguish from a state that has been written with valid progress data.
-    .progress = {
-        .data = { [0 ... sizeof(struct Boot3StateCopyProgress) - 1] = 0xFF }
-     }, 
-};
- 
 /// @brief Copy out the critical section of boot3 to SRAM, and ensure all memory accesses are complete before returning
 void in_boot3_section boot3_copyout() 
 {
@@ -66,7 +50,7 @@ void in_boot3_section boot3_exit()
     for(;;) { }
 }
 
-uint64_t in_boot3_section fnv1a_64(const uint8_t *data, size_t len) {
+uint64_t in_boot3_section boot3_fnv1a_64(const uint8_t *data, size_t len) {
     uint64_t hash = FNV1A_64_OFFSET_BASIS;
     for (size_t i = 0; i < len; ++i) {
         hash ^= data[i];
@@ -85,11 +69,13 @@ void in_boot3_section boot3_check_state()
         // Handle valid pending state
     }
 
+    gpio_put(7, 1);
+
     if (
         current_state->prelude.magic == BOOT3_STATE_MAGIC && 
-        current_state->prelude.checksum != fnv1a_64(&__boot3_end, current_state->prelude.program_size)
+        current_state->prelude.checksum != boot3_fnv1a_64(&__boot3_end, current_state->prelude.program_size)
     ) {
-        gpio_put(7, 1);
+        gpio_put(7, 0);
     }
 }
 

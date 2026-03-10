@@ -22,10 +22,4 @@ boot3_entry:
     bl boot3_main
     pop {r0}
     // If boot3_main returns, loop here forever
-    // ldr r0, =0x10001100
-    // ldr r1, =0xE000ED08
-    // str r0, [r1]
-    // ldmia r0, {r0, r1}
-    // msr msp, r0
-    // bx r1
 1:  b 1b
