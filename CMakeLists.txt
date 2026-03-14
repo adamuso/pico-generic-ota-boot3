@@ -1,16 +1,24 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.22)
+
+# Allow this project to be configured on its own for testing
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+endif()
 
 project(rp2040_boot3 C CXX ASM)
 
 # Option to control injection (on by default)
 option(BOOT3_INJECT_MEMMAP "Inject .boot3 section into pico SDK memmap_default.ld" ON)
 
+set(PICO_FLASH_SIZE_BYTES "${PICO_FLASH_SIZE_BYTES} / 2" PARENT_SCOPE)
+
 # Default PICO SDK path (projects can override by setting this variable)
 if(NOT DEFINED PICO_SDK_PATH)
     set(PICO_SDK_PATH "${CMAKE_SOURCE_DIR}/lib/pico-sdk")
 endif()
 
-set(MEMMAP_DEFAULT "${PICO_SDK_PATH}/src/rp2_common/pico_crt0/rp2040/memmap_default.ld")
+set(BOOT3_MEMMAP_PATH "${PICO_SDK_PATH}/src/rp2_common/pico_crt0/rp2040/memmap_default.ld" CACHE STRING "Path to base memmap file")
 
 # Non-invasive injection: do NOT modify files under the pico-sdk source tree.
 # Instead generate a modified linker script in the CMake binary dir and expose
@@ -18,29 +26,16 @@ set(MEMMAP_DEFAULT "${PICO_SDK_PATH}/src/rp2_common/pico_crt0/rp2040/memmap_defa
 set(MEMMAP_GENERATED "${CMAKE_BINARY_DIR}/boot3_memmap.ld")
 
 if(BOOT3_INJECT_MEMMAP)
-    if(EXISTS ${MEMMAP_DEFAULT})
-        file(READ "${MEMMAP_DEFAULT}" _mem)
+    if(EXISTS ${BOOT3_MEMMAP_PATH})
+        file(READ "${BOOT3_MEMMAP_PATH}" _mem)
 
         # Insert a .boot3 section immediately before the .text section
         set(_pattern "\n    .text : {")
+
         # Insert a .boot3 section immediately before .text and reserve exactly
         # 4 KiB for it. Define start/end symbols and ASSERT if actual contents
         # overflow the reserved area, then advance the location counter to the
         # end of the reserved area to effect padding.
-        # set(_replace "\n    .boot3 : {\n        __boot3_start__ = .;\n        KEEP(*(.boot3.entry))\n        KEEP(*(.boot3))\n    } > FLASH\n\n    .text . : {")
-
-        # string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_mem}")
-        
-        # set(_pattern "\n    .text . : {")
-        # set(_replace "\n    .boot3_critical : {\n        PROVIDE(__boot3_ram_start = .);\n        KEEP(*(.boot3.*))\n    } > RAM AT> FLASH\n\n\    __boot3_end__ = LOADADDR(.boot3_critical) + SIZEOF(.boot3_critical);\n    . = __boot3_end__;\n    . = ALIGN(4);\n\n    PROVIDE(__boot3_critical = LOADADDR(.boot3_critical));\n    PROVIDE(__boot3_critical_end = .);\n\n    .text . : {")
-        
-        # string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
-
-        # set(_pattern "\n    .text . : {")
-        # set(_replace "\n    ASSERT(__boot3_end__ - __boot3_start__ <= 4096 - 256, \"boot3 section exceeds 4KiB\")\n    . = __boot3_start__ + 4096 - 256;\n\n    .boot3_state_checksum . : {\n        PROVIDE(__boot3_state = .);\n        KEEP(*(.boot3_state.checksum))\n    }\n\n    .boot3_state_program_size . : {\n        KEEP(*(.boot3_state.program_size))\n    }\n\n    .boot3_state . : {\n        KEEP(*(.boot3_state.magic))\n        KEEP(*(.boot3_state.data))\n    } > FLASH\n\n    . = __boot3_start__ + 8192 - 256;\n    PROVIDE(__boot3_end = .);\n\n    .text . : {")
-        
-        # string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
-
         file(READ "${CMAKE_CURRENT_SOURCE_DIR}/boot3.ld" _replace)
         string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_mem}")
 
@@ -54,10 +49,10 @@ if(BOOT3_INJECT_MEMMAP)
             file(WRITE "${MEMMAP_GENERATED}" "${_new_mem}")
             message(STATUS "Generated injected memmap at ${MEMMAP_GENERATED} (pico-sdk left unchanged)")
         else()
-            message(STATUS "No injection needed; .boot3 already present or insertion point not found in ${MEMMAP_DEFAULT}")
+            message(STATUS "No injection needed; .boot3 already present or insertion point not found in ${BOOT3_MEMMAP_PATH}")
         endif()
     else()
-        message(WARNING "memmap_default.ld not found at ${MEMMAP_DEFAULT}; skipping .boot3 generation")
+        message(FATAL_ERROR "Base memmap file not found at ${BOOT3_MEMMAP_PATH}; skipping .boot3 generation")
     endif()
 endif()
 
@@ -105,6 +100,8 @@ function(pico_boot3_init TARGET)
             target_link_options(${TARGET} INTERFACE "-T${BOOT3_MEMMAP_INJECTED}")
         endif()
     endif()
+
+    target_link_libraries(${TARGET} PRIVATE boot3)
 
     # Generate checksum based on the produced .bin file. Create a file-based
     # custom command that depends on the .bin (so it runs after the .bin is

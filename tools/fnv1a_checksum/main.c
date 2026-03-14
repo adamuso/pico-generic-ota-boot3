@@ -17,7 +17,7 @@ uint64_t fnv1a_64(const uint8_t *data, size_t len) {
 
 int main(int argc, char *argv[]) {
     if (argc < 3 || argc > 4) {
-        fprintf(stderr, "Usage: %s input_path start_byte length(optional)\n", argv[0]);
+        fprintf(stderr, "Usage: %s <input_path> <start_byte> [length|\"calc\"]\n", argv[0]);
         return 1;
     }
 
