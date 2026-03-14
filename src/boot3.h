@@ -7,6 +7,7 @@
 
 #define in_boot3_section __attribute__((section(".boot3")))
 #define in_boot3_data __attribute__((section(".boot3.data")))
+#define in_boot3_bss __attribute__((section(".boot3.bss")))
 #define in_boot3_critical_section __attribute__((section(".boot3.critical")))
 #define in_boot3_user_data __attribute__((section(".boot3_state.user_data")))
 
@@ -16,6 +17,8 @@ extern char __boot3_end;
 extern char __boot3_critical;
 extern char __boot3_critical_end;
 extern char __boot3_ram_start;
+extern char __boot3_bss;
+extern char __boot3_bss_end;
 
 /// @brief Prelude of the boot3 state, which contains a magic value and checksum to validate the state, and distinguish between different versions of the state struct
 struct Boot3StatePrelude

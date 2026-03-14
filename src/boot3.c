@@ -29,6 +29,13 @@ void in_boot3_section boot3_copyout()
     for (size_t i = 0; i < len; ++i)
         copy_to[i] = copy_from_start[i];
 
+    const volatile uint32_t *copy_from_bss_start = (uint32_t *)&__boot3_bss;
+    const volatile uint32_t *copy_from_bss_end = (uint32_t *)&__boot3_bss_end;
+    const size_t bss_len = copy_from_bss_end - copy_from_bss_start;
+
+    for (size_t i = 0; i < bss_len; ++i)
+        copy_to[len + i] = 0;
+
     __compiler_memory_barrier();
 }
 
@@ -66,8 +73,8 @@ static void in_boot3_critical_section boot3_memcpy(const uint8_t *src, uint8_t *
     }
 }
 
-static in_boot3_data uint8_t buffer[FLASH_PAGE_SIZE];
-static in_boot3_data uint8_t progress_buffer[FLASH_SECTOR_SIZE / 4] = { [0 ... FLASH_SECTOR_SIZE / 4 - 1] = 0xFF };
+static in_boot3_bss uint8_t buffer[FLASH_PAGE_SIZE] = { 0 };
+static in_boot3_bss volatile uint8_t progress_buffer[FLASH_SECTOR_SIZE / 2] = { 0 };
 
 void in_boot3_critical_section boot3_copy_pending_to_current_and_exit()
 {
@@ -111,6 +118,9 @@ void in_boot3_critical_section boot3_copy_pending_to_current_and_exit()
     // We will track the copy progress in the progress struct of the state, and update it after copying each chunk, 
     // so that if power is lost in the middle of the copy, we can resume from the last updated progress when power is back.
     // Without needing to re-copy from the beginning.
+    for (size_t i = 0; i < sizeof(progress_buffer); ++i) {
+        progress_buffer[i] = 0xff;
+    }
 
     int toggle = 0;
 

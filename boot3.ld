@@ -9,9 +9,19 @@
 
     .boot3_critical : {
         PROVIDE(__boot3_ram_start = .);
-        KEEP(*(.boot3.*))
+        KEEP(*(.boot3.data))
+        KEEP(*(.boot3.critical))
     } > RAM AT> FLASH
 
+    .boot3_bss . (NOLOAD) : {
+        . = ALIGN(4);
+
+        PROVIDE(__boot3_bss = .);
+        KEEP(*(.boot3.bss))
+        . = ALIGN(4);
+        PROVIDE(__boot3_bss_end = .);
+    } > RAM
+    
     __boot3_end__ = LOADADDR(.boot3_critical) + SIZEOF(.boot3_critical);
     . = __boot3_end__;
     . = ALIGN(4);

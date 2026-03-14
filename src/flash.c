@@ -23,8 +23,8 @@ typedef struct flash_hardware_save_state {
 
 #define BOOT2_SIZE_WORDS 64
 
-static in_boot3_data uint32_t boot2_copyout[BOOT2_SIZE_WORDS] = { 0 };
-static in_boot3_data bool boot2_copyout_valid  = false;
+static in_boot3_bss uint32_t boot2_copyout[BOOT2_SIZE_WORDS] = { 0 };
+static in_boot3_bss bool boot2_copyout_valid = false;
 
 static void __no_inline_not_in_flash_func(flash_init_boot2_copyout)(void) {
     if (boot2_copyout_valid)
