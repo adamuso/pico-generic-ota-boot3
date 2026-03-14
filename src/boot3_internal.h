@@ -13,5 +13,3 @@ extern char __boot3_critical_end;
 extern char __boot3_ram_start;
 extern char __boot3_bss;
 extern char __boot3_bss_end;
-
-uint64_t in_boot3_section boot3_fnv1a_64_internal(const uint8_t *data, size_t len);

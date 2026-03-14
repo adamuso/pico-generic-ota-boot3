@@ -6,9 +6,9 @@
 add_library(boot3_image OBJECT
     boot3.S
     boot3.c
+    boot3_internal.c
     boot3_state.c
-    boot3_api.c
-    flash.c
+    boot3_flash.c
 )
 
 # set_target_properties(boot3_image PROPERTIES
@@ -50,6 +50,10 @@ if(DEFINED PICO_SDK_PATH)
         ${PICO_SDK_PATH}/src/rp2040/pico_platform/include
     )
 endif()
+
+target_include_directories(boot3_image PRIVATE
+    ${CMAKE_BINARY_DIR}/generated/pico_base
+)
 
 # target_link_libraries(boot3_image
 #     hardware_flash

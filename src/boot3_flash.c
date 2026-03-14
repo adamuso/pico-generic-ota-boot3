@@ -1,4 +1,5 @@
-#include "flash.h"
+// TODO: Somehow get this from project config instead of hardcoding it here
+#define PICO_RP2040 1
 
 #include "hardware/gpio.h"
 #include "pico/assert.h"
@@ -7,11 +8,20 @@
 #include "hardware/structs/pads_qspi.h"
 #include "hardware/xip_cache.h"
 
-#include "sections.h"
 #include "boot3.h"
 #include "boot3_internal.h"
 
-#define PICO_RP2040 1
+#include "pico/platform/sections.h"
+
+#undef __not_in_flash
+#undef __not_in_flash_func
+#undef __no_inline_not_in_flash_func
+
+#define __not_in_flash(group) __attribute__((section(".boot3.critical")))
+#define __not_in_flash_func(func_name) __not_in_flash(__STRING(func_name)) func_name
+#define __no_inline_not_in_flash_func(func_name) __noinline __not_in_flash_func(func_name)
+
+
 #define FLASH_BLOCK_ERASE_CMD 0xd8
 
 typedef struct flash_hardware_save_state {

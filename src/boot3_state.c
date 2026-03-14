@@ -9,12 +9,14 @@ const uint64_t boot3_checksum __attribute__((section(".boot3_state.checksum"))) 
 const uint32_t boot3_program_size __attribute__((section(".boot3_state.program_size"))) = 0xFFFFFFFF;
 const uint32_t boot3_magic __attribute__((section(".boot3_state.magic"))) = BOOT3_STATE_MAGIC; 
 
+extern uint64_t in_boot3_section boot3_internal_fnv1a_64(const uint8_t *data, size_t len);
+
 struct Boot3StateInternalData boot3_current_state_data __attribute__((section(".boot3_state.data"))) = {
     .config = {
         .flash_binary_start = (uint8_t *)&__flash_binary_start,
         .flash_binary_end = (uint8_t *)&__flash_binary_end,
         .should_update = &boot3_should_update,
-        .fnv1a_64 = &boot3_fnv1a_64_internal,
+        .fnv1a_64 = &boot3_internal_fnv1a_64,
     },
 };
 
