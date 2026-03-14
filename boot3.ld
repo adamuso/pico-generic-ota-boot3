@@ -5,6 +5,8 @@
         KEEP(*(.boot3))
     } > FLASH
 
+    PROVIDE(__boot3_critical = .);
+
     .boot3_critical : {
         PROVIDE(__boot3_ram_start = .);
         KEEP(*(.boot3.*))
@@ -14,7 +16,6 @@
     . = __boot3_end__;
     . = ALIGN(4);
 
-    PROVIDE(__boot3_critical = LOADADDR(.boot3_critical));
     PROVIDE(__boot3_critical_end = .);
 
     ASSERT(__boot3_end__ - __boot3_start__ <= 4096 - 256, "boot2 + boot3 section exceeds 4KiB")

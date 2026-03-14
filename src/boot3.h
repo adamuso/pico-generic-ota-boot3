@@ -36,7 +36,7 @@ struct Boot3StateCopyProgress
 {
     // Each byte represents 4096 of flash. 2048 bytes * 4096 = 8MiB, which is the half of max flash size of the RP2040, 
     // so this is enough to track progress of copying out the whole flash.
-    char data[2048];
+    const char data[2048];
 };
 
 struct Boot3StateInternalData
@@ -60,12 +60,17 @@ struct Boot3State
 
 static_assert(sizeof(struct Boot3State) == 4096, "Boot3State must be exactly 4096 bytes to fit in the reserved space at the end of the boot3 section");
 
-static inline struct Boot3State *boot3_get_current_state() {
-    return (struct Boot3State *)(&__boot3_end - sizeof(struct Boot3State));
+static inline const struct Boot3State *boot3_get_current_state() {
+    return (const struct Boot3State *)(&__boot3_end - sizeof(struct Boot3State));
 }
 
-static inline struct Boot3State *boot3_get_pending_state() {
-    return (struct Boot3State *)(&__boot3_end - sizeof(struct Boot3State) + (PICO_FLASH_SIZE_BYTES / 2));
+static inline const struct Boot3State *boot3_get_pending_state() {
+    return (const struct Boot3State *)(&__boot3_end - sizeof(struct Boot3State) + (PICO_FLASH_SIZE_BYTES / 2));
 }
 
 uint64_t in_boot3_section boot3_fnv1a_64(const uint8_t *data, size_t len);
+
+// API
+bool boot3_flash_erase_pending_data(size_t len);
+void boot3_flash_program_pending_data(size_t offset, const uint8_t* data, size_t len);
+bool boot3_validate_state(const struct Boot3State* state);

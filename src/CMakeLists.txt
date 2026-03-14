@@ -7,6 +7,7 @@ add_library(boot3_image OBJECT
     boot3.S
     boot3.c
     boot3_state.c
+    boot3_api.c
     flash.c
 )
 
@@ -41,6 +42,8 @@ if(DEFINED PICO_SDK_PATH)
         ${PICO_SDK_PATH}/src/rp2_common/hardware_gpio/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_irq/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_resets/include
+        ${PICO_SDK_PATH}/src/rp2_common/hardware_sync/include
+        ${PICO_SDK_PATH}/src/rp2_common/hardware_sync_spin_lock/include
         ${PICO_SDK_PATH}/src/rp2_common/pico_flash/include
         ${PICO_SDK_PATH}/src/rp2040/hardware_regs/include
         ${PICO_SDK_PATH}/src/rp2040/hardware_structs/include

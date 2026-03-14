@@ -1,5 +1,6 @@
 #include "flash.h"
 
+#include "hardware/gpio.h"
 #include "pico/assert.h"
 #include "pico/bootrom.h"
 #include "hardware/flash.h"
@@ -22,8 +23,8 @@ typedef struct flash_hardware_save_state {
 
 #define BOOT2_SIZE_WORDS 64
 
-static uint32_t boot2_copyout[BOOT2_SIZE_WORDS] in_boot3_data;
-static bool boot2_copyout_valid in_boot3_data  = false;
+static in_boot3_data uint32_t boot2_copyout[BOOT2_SIZE_WORDS] = { 0 };
+static in_boot3_data bool boot2_copyout_valid  = false;
 
 static void __no_inline_not_in_flash_func(flash_init_boot2_copyout)(void) {
     if (boot2_copyout_valid)
@@ -72,6 +73,7 @@ void __no_inline_not_in_flash_func(boot3_flash_range_erase)(uint32_t flash_offs,
 #endif
     invalid_params_if(HARDWARE_FLASH, flash_offs & (FLASH_SECTOR_SIZE - 1));
     invalid_params_if(HARDWARE_FLASH, count & (FLASH_SECTOR_SIZE - 1));
+
     rom_connect_internal_flash_fn connect_internal_flash_func = (rom_connect_internal_flash_fn)rom_func_lookup_inline(ROM_FUNC_CONNECT_INTERNAL_FLASH);
     rom_flash_exit_xip_fn flash_exit_xip_func = (rom_flash_exit_xip_fn)rom_func_lookup_inline(ROM_FUNC_FLASH_EXIT_XIP);
     rom_flash_range_erase_fn flash_range_erase_func = (rom_flash_range_erase_fn)rom_func_lookup_inline(ROM_FUNC_FLASH_RANGE_ERASE);
