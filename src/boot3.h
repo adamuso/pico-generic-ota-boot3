@@ -24,7 +24,7 @@ struct Boot3StateConfig
 {
     uint8_t* flash_binary_start;
     uint8_t* flash_binary_end;
-    bool (*should_update)(void);
+    bool (*should_update)(bool checksum_mismatch);
     uint64_t (*fnv1a_64)(const uint8_t *data, size_t len);
 };
 
@@ -69,8 +69,36 @@ static inline uint64_t boot3_fnv1a_64(const uint8_t *data, size_t len)
     return boot3_get_current_state()->data.config.fnv1a_64(data, len);
 }
 
-// API
+/// @brief Erase the flash range for the pending state. The pending state is stored at the second half of the flash, 
+/// so the offset to the second half of the flash is added automatically. The caller just needs to provide the length
+/// of the pending program, and the function will erase the corresponding flash range for the pending state, starting 
+/// from the offset of the pending state. The caller should erase whole flash for the program in one go and do not split
+/// it into multiple calls, so the `len` should be the total length of the pending program.
+/// @param len The length of the whole pending program
+/// @return true if the flash erase is successful, false otherwise
 bool boot3_flash_erase_pending_data(size_t len);
+
+/// @brief Program the pending state data to flash. The pending state is stored at the second half of the flash, the offset 
+/// to the second half of the flash is added automatically. When programming the pending state, the caller should ensure 
+/// that the program is provided as whole program with boot2 and boot3 included, so that when the pending state is applied, 
+/// it will address the parts of the flash correctly.
+///
+/// Flash must be programmed in pages (256 bytes), so the `len` must be a multiple of flash page size.
+/// @param offset The offset within the pending state region to start programming
+/// @param data The data to program
+/// @param len The length of the data to program
 void boot3_flash_program_pending_data(size_t offset, const uint8_t* data, size_t len);
+
+/// @brief Validate the boot3 state by checking the magic value, program size, and checksum. The checksum is calculated based 
+/// on the program data in flash, so it can be used to verify the integrity of the program data, and also to distinguish between 
+/// a pending state that has been applied but not cleared, and a pending state that has never been applied (since they will have different checksums).
+/// @param state The boot3 state to validate
+/// @return true if the state is valid, false otherwise
 bool boot3_validate_state(const struct Boot3State* state);
-bool __attribute__((weak)) boot3_should_update();
+
+/// @brief Determine if the program should be updated. This is a weak function that can be overridden by the user to provide 
+/// custom logic for determining whether to apply the pending state. When no function is provided by the user, the default behavior
+/// is to update whenever there is a checksum mismatch between the current and pending state. 
+/// @param checksum_mismatch Indicates if there is a checksum mismatch between the current and pending state
+/// @return true if the program should be updated, false otherwise
+bool __attribute__((weak)) boot3_should_update(bool checksum_mismatch);

@@ -158,24 +158,26 @@ void in_boot3_critical_section boot3_copy_pending_to_current_and_exit()
 
     gpio_put(7, 1);
 
-    // boot3_flash_range_erase(0, 8192);
+#if 0 // TODO: Should we allow for repropgramming our boot3 bootloader when new program is flashed?
+    boot3_flash_range_erase(0, 8192);
 
-    // // Currently we are in state that does not have boot2 and boot3 flash. Firstly we need to copy them
-    // // from pending state to first half of the flash.
-    // for (size_t i = 0; i < 8192; i += sizeof(buffer)) {
-    //     size_t chunk_size = 8192 - i;
-    //     if (chunk_size > sizeof(buffer)) {
-    //         chunk_size = sizeof(buffer);
-    //     }
+    // Currently we are in state that does not have boot2 and boot3 flash. Firstly we need to copy them
+    // from pending state to first half of the flash.
+    for (size_t i = 0; i < 8192; i += sizeof(buffer)) {
+        size_t chunk_size = 8192 - i;
+        if (chunk_size > sizeof(buffer)) {
+            chunk_size = sizeof(buffer);
+        }
 
-    //     // Copy a chunk of the pending program from flash to RAM buffer
-    //     for (size_t j = 0; j < chunk_size; ++j) {
-    //         buffer[j] = pending_source[i + j];
-    //     }
+        // Copy a chunk of the pending program from flash to RAM buffer
+        for (size_t j = 0; j < chunk_size; ++j) {
+            buffer[j] = pending_source[i + j];
+        }
 
-    //     // Program the chunk from RAM buffer to the first half of flash
-    //     boot3_flash_range_program(i, buffer, chunk_size);
-    // }
+        // Program the chunk from RAM buffer to the first half of flash
+        boot3_flash_range_program(i, buffer, chunk_size);
+    }
+#endif
 
     restore_interrupts(ints);
 
@@ -194,6 +196,13 @@ void in_boot3_section boot3_check_state()
     bool current_state_valid = current_state->prelude.magic == BOOT3_STATE_MAGIC && 
         current_state->prelude.checksum == boot3_fnv1a_64_internal(&__boot3_end, current_state->prelude.program_size);
 
+    bool should_update = current_state->prelude.checksum != pending_state->prelude.checksum;
+        
+    if (current_state->data.config.should_update != NULL) 
+    {
+        should_update = current_state->data.config.should_update(should_update);
+    }
+
     // Pending state is valid when:
     // - It has the correct magic value
     // - Its program size is not larger than half of the flash size (since we store the pending state 
@@ -204,19 +213,12 @@ void in_boot3_section boot3_check_state()
         pending_state->prelude.magic == BOOT3_STATE_MAGIC && 
         pending_state->prelude.program_size <= (uint32_t)(PICO_FLASH_SIZE_BYTES / 2) - 8192 &&
         pending_state->prelude.program_size > 0 && 
-        (current_state->prelude.checksum != pending_state->prelude.checksum || !current_state_valid)
+        (should_update || !current_state_valid)
     ) {
-        bool should_update = true;
-        
-        if (current_state->data.config.should_update != NULL) 
-        {
-            should_update = current_state->data.config.should_update();
-        }
-
         // When pending state is valid, calculate the checksum of the pending state program, 
         // and if it matches the checksum in the prelude, copy the pending state to the current state to apply it.
         if (
-            should_update && boot3_fnv1a_64_internal( 
+            boot3_fnv1a_64_internal( 
                 (uint8_t *)&__boot3_end + (PICO_FLASH_SIZE_BYTES / 2), pending_state->prelude.program_size
             ) == pending_state->prelude.checksum
         ) {
@@ -254,6 +256,8 @@ void in_boot3_section boot3_main(void)
     reset_unreset_block_num_wait_blocking(RESET_IO_BANK0);
     reset_unreset_block_num_wait_blocking(RESET_PADS_BANK0);
 
+    // TODO: Add defines for the GPIOs we use for progress indication, instead of hardcoding 7 and 8 here.
+    // Also allow to disable them when user does not want that.
     boot3_gpio_set_function(7, GPIO_FUNC_SIO);
     gpio_set_dir(7, GPIO_OUT);
     boot3_gpio_set_function(8, GPIO_FUNC_SIO);

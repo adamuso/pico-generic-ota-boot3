@@ -21,10 +21,10 @@ struct Boot3UserData
 };
 
 struct Boot3UserData in_boot3_user_data boot3_user_data = {
-    .version = 1,
+    .version = 2,
 };
 
-bool boot3_should_update() 
+bool boot3_should_update(bool checksum_mismatch) 
 {
     struct Boot3UserData* current = (struct Boot3UserData*)boot3_get_current_state()->user_data;
     struct Boot3UserData* pending = (struct Boot3UserData*)boot3_get_pending_state()->user_data;
@@ -40,7 +40,7 @@ int main(void) {
 
     stdio_init_all();
 
-    printf("Hello, world! 12\n");
+    printf("Hello, world! 123\n");
     printf("Program checksum: %llx\n", boot3_get_current_state()->prelude.checksum);
     printf("Pending checksum: %llx\n", boot3_get_pending_state()->prelude.checksum);
     printf("Pointers: %p %p %d\n", &__flash_binary_start, &__boot3_end, &__flash_binary_start - &__boot3_end);
