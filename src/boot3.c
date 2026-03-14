@@ -1,5 +1,6 @@
 #define PICO_RP2040 1
 #include "boot3.h"
+#include "boot3_internal.h"
 
 #include <stddef.h>
 
@@ -58,7 +59,7 @@ void in_boot3_critical_section boot3_exit()
     for(;;) { }
 }
 
-uint64_t in_boot3_section boot3_fnv1a_64(const uint8_t *data, size_t len) {
+uint64_t in_boot3_section boot3_fnv1a_64_internal(const uint8_t *data, size_t len) {
     uint64_t hash = FNV1A_64_OFFSET_BASIS;
     for (size_t i = 0; i < len; ++i) {
         hash ^= data[i];
@@ -67,14 +68,14 @@ uint64_t in_boot3_section boot3_fnv1a_64(const uint8_t *data, size_t len) {
     return hash;
 }
 
-static void in_boot3_critical_section boot3_memcpy(const uint8_t *src, uint8_t *dst, size_t len) {
+static void in_boot3_critical_section boot3_memcpy(const volatile uint8_t *src, uint8_t *dst, size_t len) {
     for (size_t i = 0; i < len; ++i) {
         dst[i] = src[i];
     }
 }
 
 static in_boot3_bss uint8_t buffer[FLASH_PAGE_SIZE] = { 0 };
-static in_boot3_bss volatile uint8_t progress_buffer[FLASH_SECTOR_SIZE / 2] = { 0 };
+static in_boot3_bss uint8_t progress_buffer[FLASH_SECTOR_SIZE / 2] = { 0 };
 
 void in_boot3_critical_section boot3_copy_pending_to_current_and_exit()
 {
@@ -82,32 +83,10 @@ void in_boot3_critical_section boot3_copy_pending_to_current_and_exit()
     // so it doesn't re-validate the pending state, and just directly copies the pending state program to the first half of the flash where the 
     // current state is located, to apply the pending state.
 
-    const struct Boot3State* current_state = boot3_get_current_state();
     const struct Boot3State* pending_state = boot3_get_pending_state();
-    // uint8_t buffer[FLASH_PAGE_SIZE];
 
     uint32_t ints = save_and_disable_interrupts();
     uint32_t flash_to_erase = (pending_state->prelude.program_size - 1) / FLASH_SECTOR_SIZE + 1; // Round up to nearest flash sector
-
-    const uint8_t* pending_state_bytes = (const uint8_t*)pending_state;
-
-    // Firstly erase current_state area and copy new state from pending_state. This is safe even if the power is lost in the middle of the process.
-    // When power is back, if the state copy is not complete, the pending state will still be valid (since we haven't erased it), but the checksum of
-    // current_state won't match, this will cause retry of the copy process until it is complete. 
-    boot3_flash_range_erase(FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
-
-    for (size_t i = 0; i < sizeof(struct Boot3State); i += sizeof(buffer)) {
-        size_t chunk_size = sizeof(struct Boot3State) - i;
-        if (chunk_size > sizeof(buffer)) {
-            chunk_size = sizeof(buffer);
-        }
-
-        // Copy a chunk of the pending state from flash to RAM buffer
-        boot3_memcpy(pending_state_bytes + i, buffer, chunk_size);
-
-        // Program the chunk from RAM buffer to the 4096 offset of flash, which is the location of the current state
-        boot3_flash_range_program(4096 + i, buffer, chunk_size);
-    }
 
     // Erase the current state by erasing the first half of the flash.
     boot3_flash_range_erase(8192, flash_to_erase * FLASH_SECTOR_SIZE);
@@ -118,8 +97,10 @@ void in_boot3_critical_section boot3_copy_pending_to_current_and_exit()
     // We will track the copy progress in the progress struct of the state, and update it after copying each chunk, 
     // so that if power is lost in the middle of the copy, we can resume from the last updated progress when power is back.
     // Without needing to re-copy from the beginning.
+        volatile uint8_t *progress_buffer_volatile = (volatile uint8_t *)progress_buffer;
+
     for (size_t i = 0; i < sizeof(progress_buffer); ++i) {
-        progress_buffer[i] = 0xff;
+        progress_buffer_volatile[i] = 0xff;
     }
 
     int toggle = 0;
@@ -158,7 +139,24 @@ void in_boot3_critical_section boot3_copy_pending_to_current_and_exit()
         }
     }
 
+    volatile const uint8_t* pending_state_bytes = (volatile const uint8_t*)pending_state;
+
+    // Erase current_state area and copy new state from pending_state. This is safe even if the power is lost in the middle of the process.
+    // When power is back, if the state copy is not complete, the pending state will still be valid (since we haven't erased it), but the checksum of
+    // current_state won't match, this will cause retry of the copy process until it is complete. 
+    boot3_flash_range_erase(FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+
     gpio_put(7, 0);
+
+    for (size_t i = 0; i < sizeof(struct Boot3State); i += sizeof(buffer)) {
+        // Copy a chunk of the pending state from flash to RAM buffer
+        boot3_memcpy(pending_state_bytes + i, buffer, sizeof(buffer));
+
+        // Program the chunk from RAM buffer to the 4096 offset of flash, which is the location of the current state
+        boot3_flash_range_program(4096 + i, buffer, sizeof(buffer));
+    }
+
+    gpio_put(7, 1);
 
     // boot3_flash_range_erase(0, 8192);
 
@@ -194,7 +192,7 @@ void in_boot3_section boot3_check_state()
     gpio_put(7, 1);
 
     bool current_state_valid = current_state->prelude.magic == BOOT3_STATE_MAGIC && 
-        current_state->prelude.checksum == boot3_fnv1a_64(&__boot3_end, current_state->prelude.program_size);
+        current_state->prelude.checksum == boot3_fnv1a_64_internal(&__boot3_end, current_state->prelude.program_size);
 
     // Pending state is valid when:
     // - It has the correct magic value
@@ -208,10 +206,17 @@ void in_boot3_section boot3_check_state()
         pending_state->prelude.program_size > 0 && 
         (current_state->prelude.checksum != pending_state->prelude.checksum || !current_state_valid)
     ) {
+        bool should_update = true;
+        
+        if (current_state->data.config.should_update != NULL) 
+        {
+            should_update = current_state->data.config.should_update();
+        }
+
         // When pending state is valid, calculate the checksum of the pending state program, 
         // and if it matches the checksum in the prelude, copy the pending state to the current state to apply it.
         if (
-            boot3_fnv1a_64( 
+            should_update && boot3_fnv1a_64_internal( 
                 (uint8_t *)&__boot3_end + (PICO_FLASH_SIZE_BYTES / 2), pending_state->prelude.program_size
             ) == pending_state->prelude.checksum
         ) {
@@ -255,8 +260,6 @@ void in_boot3_section boot3_main(void)
     gpio_set_dir(8, GPIO_OUT);
 
     boot3_check_state();
-    
-    busy_wait_at_least_cycles(SYS_CLK_HZ / 10);    
     
     boot3_exit();
 }

@@ -15,6 +15,23 @@
 
 extern char __flash_binary_start, __flash_binary_end;
 
+struct Boot3UserData
+{
+    uint32_t version;
+};
+
+struct Boot3UserData in_boot3_user_data boot3_user_data = {
+    .version = 1,
+};
+
+bool boot3_should_update() 
+{
+    struct Boot3UserData* current = (struct Boot3UserData*)boot3_get_current_state()->user_data;
+    struct Boot3UserData* pending = (struct Boot3UserData*)boot3_get_pending_state()->user_data;
+
+    return current->version != pending->version;
+}
+
 int main(void) {
     internal_ws2812_init();
 
@@ -23,7 +40,7 @@ int main(void) {
 
     stdio_init_all();
 
-    printf("Hello, world! 1\n");
+    printf("Hello, world! 12\n");
     printf("Program checksum: %llx\n", boot3_get_current_state()->prelude.checksum);
     printf("Pending checksum: %llx\n", boot3_get_pending_state()->prelude.checksum);
     printf("Pointers: %p %p %d\n", &__flash_binary_start, &__boot3_end, &__flash_binary_start - &__boot3_end);
@@ -85,6 +102,8 @@ int main(void) {
 
     printf("Finished reading new program, total size: %u bytes\n", offset);
 
+    bool pending_program_valid = false;
+
     if (offset > 0)
     {
         internal_ws2812_reset();
@@ -95,15 +114,20 @@ int main(void) {
         boot3_flash_erase_pending_data(offset);
         restore_interrupts(ints);
 
+        printf("Pending program magic: %x\n", boot3_get_pending_state()->prelude.magic);
+
         printf("Programming pending state...\n");
-        uint32_t pages = (offset - 1) / FLASH_PAGE_SIZE + 1; // Round up to nearest flash sector
+        uint32_t pages = (offset - 1) / FLASH_PAGE_SIZE + 1; // Round up to nearest flash page
 
         ints = save_and_disable_interrupts();
         boot3_flash_program_pending_data(0, new_program, pages * FLASH_PAGE_SIZE);
         restore_interrupts(ints);
 
+        pending_program_valid = boot3_validate_state(boot3_get_pending_state());
+
+        printf("Pending program magic: %x\n", boot3_get_pending_state()->prelude.magic);
         printf("New program checksum: %llx\n", boot3_fnv1a_64(new_program, offset));
-        printf("Is pending state valid: %d\n", boot3_validate_state(boot3_get_pending_state()));
+        printf("Is pending state valid: %d\n", pending_program_valid);
     }
     else 
     {
@@ -111,8 +135,11 @@ int main(void) {
         internal_ws2812_transmit(128, 0, 128);
     }
 
-    printf("Waiting for key stroke before reboot...\n");
-    stdio_getchar();
+    if (!pending_program_valid || offset == 0)
+    {
+        printf("Waiting for key stroke before reboot...\n");
+        stdio_getchar();
+    }
 
     internal_ws2812_reset();
     internal_ws2812_transmit(128, 0, 0);

@@ -9,6 +9,7 @@
 
 #include "sections.h"
 #include "boot3.h"
+#include "boot3_internal.h"
 
 #define PICO_RP2040 1
 #define FLASH_BLOCK_ERASE_CMD 0xd8

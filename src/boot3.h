@@ -5,20 +5,11 @@
 
 #include "pico.h"
 
-#define in_boot3_section __attribute__((section(".boot3")))
-#define in_boot3_data __attribute__((section(".boot3.data")))
-#define in_boot3_bss __attribute__((section(".boot3.bss")))
-#define in_boot3_critical_section __attribute__((section(".boot3.critical")))
 #define in_boot3_user_data __attribute__((section(".boot3_state.user_data")))
 
 #define BOOT3_STATE_MAGIC 0x553007B0
 
 extern char __boot3_end;
-extern char __boot3_critical;
-extern char __boot3_critical_end;
-extern char __boot3_ram_start;
-extern char __boot3_bss;
-extern char __boot3_bss_end;
 
 /// @brief Prelude of the boot3 state, which contains a magic value and checksum to validate the state, and distinguish between different versions of the state struct
 struct Boot3StatePrelude
@@ -33,6 +24,8 @@ struct Boot3StateConfig
 {
     uint8_t* flash_binary_start;
     uint8_t* flash_binary_end;
+    bool (*should_update)(void);
+    uint64_t (*fnv1a_64)(const uint8_t *data, size_t len);
 };
 
 struct Boot3StateCopyProgress
@@ -71,9 +64,13 @@ static inline const struct Boot3State *boot3_get_pending_state() {
     return (const struct Boot3State *)(&__boot3_end - sizeof(struct Boot3State) + (PICO_FLASH_SIZE_BYTES / 2));
 }
 
-uint64_t in_boot3_section boot3_fnv1a_64(const uint8_t *data, size_t len);
+static inline uint64_t boot3_fnv1a_64(const uint8_t *data, size_t len)
+{
+    return boot3_get_current_state()->data.config.fnv1a_64(data, len);
+}
 
 // API
 bool boot3_flash_erase_pending_data(size_t len);
 void boot3_flash_program_pending_data(size_t offset, const uint8_t* data, size_t len);
 bool boot3_validate_state(const struct Boot3State* state);
+bool __attribute__((weak)) boot3_should_update();

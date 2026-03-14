@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "boot3.h"
+#include "boot3_internal.h"
 
 extern char __flash_binary_start, __flash_binary_end;
 
@@ -12,6 +13,8 @@ struct Boot3StateInternalData boot3_current_state_data __attribute__((section(".
     .config = {
         .flash_binary_start = (uint8_t *)&__flash_binary_start,
         .flash_binary_end = (uint8_t *)&__flash_binary_end,
+        .should_update = &boot3_should_update,
+        .fnv1a_64 = &boot3_fnv1a_64_internal,
     },
 };
 

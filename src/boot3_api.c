@@ -4,6 +4,7 @@
 #include "hardware/flash.h"
 
 #include "boot3.h"
+#include "boot3_internal.h"
 
 bool boot3_flash_erase_pending_data(size_t len)
 {
@@ -12,6 +13,11 @@ bool boot3_flash_erase_pending_data(size_t len)
     }
 
     size_t sectors = (len - 1) / FLASH_SECTOR_SIZE + 1;
+
+    if (sectors < 2) {
+        // Always erase at least two first sectors to cleanup pending magic and checksum
+        sectors = 2;
+    }
 
     flash_range_erase(PICO_FLASH_SIZE_BYTES / 2, sectors * FLASH_SECTOR_SIZE);
     return true;
