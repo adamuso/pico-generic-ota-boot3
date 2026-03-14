@@ -15,7 +15,7 @@ set(MEMMAP_DEFAULT "${PICO_SDK_PATH}/src/rp2_common/pico_crt0/rp2040/memmap_defa
 # Non-invasive injection: do NOT modify files under the pico-sdk source tree.
 # Instead generate a modified linker script in the CMake binary dir and expose
 # its path to callers. This keeps the SDK folder immutable.
-set(MEMMAP_GENERATED "${CMAKE_BINARY_DIR}/memmap_default.ld")
+set(MEMMAP_GENERATED "${CMAKE_BINARY_DIR}/boot3_memmap.ld")
 
 if(BOOT3_INJECT_MEMMAP)
     if(EXISTS ${MEMMAP_DEFAULT})
