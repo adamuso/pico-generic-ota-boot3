@@ -13,6 +13,7 @@
 #include "hardware/flash.h"
 #include "hardware/gpio.h"
 #include "hardware/resets.h"
+#include "hardware/watchdog.h"
 #include "hardware/sync.h"
 #include "hardware/structs/resets.h"
 #include "hardware/clocks.h"
@@ -205,19 +206,25 @@ void in_boot3_section boot3_internal_check_state()
         current_state->prelude.checksum == boot3_internal_fnv1a_64(&__boot3_end, current_state->prelude.program_size);
 
     // We should update when current and pending state checksum mismatch
-    bool should_update = current_state->prelude.checksum != pending_state->prelude.checksum;
-        
+    bool checksum_mismatch = current_state->prelude.checksum != pending_state->prelude.checksum;
+
+#if BOOT3_AUTO_UPDATE
+    bool should_update = checksum_mismatch;
+#else
+    bool should_update = checksum_mismatch && watchdog_hw->scratch[0] == BOOT3_STATE_MAGIC;
+#endif
+
     // But we allow user to override this logic with the should_update callback in the state config, 
     // which can implement custom logic to decide whether to update when there is a checksum mismatch, 
     // for example based on some user data in the state, or based on other conditions like battery level, etc.
     if (current_state_valid && current_state->data.config.should_update != NULL) 
     {
-        should_update = current_state->data.config.should_update(should_update);
+        should_update = current_state->data.config.should_update(checksum_mismatch);
     }
 
     if (!current_state_valid && current_state->data.config.should_recover != NULL) 
     {
-        bool should_recover = current_state->data.config.should_recover(should_update, &current_state_valid);
+        bool should_recover = current_state->data.config.should_recover(checksum_mismatch, &current_state_valid);
 
         if (!should_recover && !current_state_valid)
         {
@@ -234,6 +241,13 @@ void in_boot3_section boot3_internal_check_state()
             for (;;) tight_loop_contents();
         }
     }
+
+#if !BOOT3_AUTO_UPDATE
+    // Clear now, because should_update or should_recover might want to read this value
+    if (watchdog_hw->scratch[0] == BOOT3_STATE_MAGIC) {
+        watchdog_hw->scratch[0] = 0;
+    }
+#endif
 
     // Pending state is valid when:
     // - It has the correct magic value

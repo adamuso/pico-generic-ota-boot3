@@ -98,6 +98,9 @@ void boot3_flash_program_pending_data(size_t offset, const uint8_t* data, size_t
 /// @return true if the state is valid, false otherwise
 bool boot3_validate_state(const struct Boot3State* state);
 
+/// @brief Request a reboot to apply the pending update. This function will not return, as the device will reboot immediately after calling this function.
+void __attribute__((noreturn)) boot3_reboot_request_update();
+
 /// @brief Determine if the program should be updated. This is a weak function that can be overridden by the user to provide 
 /// custom logic for determining whether to apply the pending state. When no function is provided by the user, the default behavior
 /// is to update whenever there is a checksum mismatch between the current and pending state. 

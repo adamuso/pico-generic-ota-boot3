@@ -1,8 +1,13 @@
 /* Copyright (c) 2026 Adam Ogiba - Licensed under MIT */
+
+// TODO: Somehow get this from project config instead of hardcoding it here
+#define PICO_RP2040 1
+
 #include <stddef.h>
 #include <stdint.h>
 
 #include "hardware/flash.h"
+#include "hardware/watchdog.h"
 
 #include "boot3.h"
 #include "boot3_internal.h"
@@ -39,4 +44,11 @@ bool boot3_validate_state(const struct Boot3State* state)
         state->prelude.checksum == boot3_fnv1a_64(
             (uint8_t *)&__boot3_end + (PICO_FLASH_SIZE_BYTES / 2), state->prelude.program_size
         );
+}
+
+void __attribute__((noreturn)) boot3_reboot_request_update()
+{
+    watchdog_hw->scratch[0] = BOOT3_STATE_MAGIC;
+    watchdog_reboot(0, 0, 0);
+    for (;;) tight_loop_contents();
 }

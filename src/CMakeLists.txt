@@ -43,6 +43,7 @@ if(DEFINED PICO_SDK_PATH)
         ${PICO_SDK_PATH}/src/rp2_common/hardware_timer/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_xosc/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_clocks/include
+        ${PICO_SDK_PATH}/src/rp2_common/hardware_watchdog/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_sync_spin_lock/include
         ${PICO_SDK_PATH}/src/rp2_common/pico_flash/include
         ${PICO_SDK_PATH}/src/rp2040/hardware_regs/include
@@ -52,6 +53,7 @@ if(DEFINED PICO_SDK_PATH)
 endif()
 
 target_compile_definitions(boot3_image PRIVATE
+    BOOT3_AUTO_UPDATE=$<BOOL:${BOOT3_AUTO_UPDATE}>
     BOOT3_WS2812_ENABLE=$<BOOL:${BOOT3_WS2812_ENABLE}>
     BOOT3_STATUS_ENABLE=$<BOOL:${BOOT3_STATUS_ENABLE}>
     $<IF:$<BOOL:${BOOT3_WS2812_GPIO}>,BOOT3_WS2812_GPIO=${BOOT3_WS2812_GPIO},>

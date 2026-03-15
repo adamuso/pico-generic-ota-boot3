@@ -10,6 +10,7 @@ project(rp2040_boot3 C CXX ASM)
 
 # Option to control injection (on by default)
 option(BOOT3_INJECT_MEMMAP "Inject .boot3 section into pico SDK memmap_default.ld" ON)
+option(BOOT3_AUTO_UPDATE "Enable automatic update of the flash when a new pending firmware is available. When disabled, the update must be triggered manually" ON)
 option(BOOT3_WS2812_ENABLE "Enable WS2812 support in .boot3" OFF)
 option(BOOT3_STATUS_ENABLE "Enable status/program LED support in .boot3" OFF)
 set(BOOT3_WS2812_GPIO "" CACHE STRING "GPIO number for WS2812 data line (PICO_DEFAULT_WS2812_PIN used if not set)")
