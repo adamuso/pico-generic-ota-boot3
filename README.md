@@ -72,6 +72,7 @@ Note: The following items are not listed by priority.
 - [ ] Implement pending program signature verification to ensure only authorized firmware can be flashed to the current state
 - [ ] Consider adding support for bootloader reprogramming
 - [ ] Fix a known issue where the checksum and program size are not injected on the first build; currently, a second build is sometimes required for correct injection.
+- [ ] Add support for triggering a bootloader update via a watchdog scratch register, allowing the user to explicitly control whether an update should occur after reboot (currently, an update is always performed if the checksum differs)
 
 ---
 
