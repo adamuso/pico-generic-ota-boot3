@@ -73,6 +73,7 @@ Note: The following items are not listed by priority.
 - [ ] Consider adding support for bootloader reprogramming
 - [ ] Fix a known issue where the checksum and program size are not injected on the first build; currently, a second build is sometimes required for correct injection.
 - [ ] Add support for triggering a bootloader update via a watchdog scratch register, allowing the user to explicitly control whether an update should occur after reboot (currently, an update is always performed if the checksum differs)
+- [ ] What is the expected behavior if both the current and pending states are invalid?
 
 ---
 
@@ -86,6 +87,8 @@ The bootloader splits flash into two equal halves:
 | Flash/2 → Flash end | **Pending** (staged) program |
 
 At every boot, `boot3` runs before the main application. It checks whether a valid pending firmware exists in the second half of flash and, if an update is required, copies it over the current slot and launches it. If no update is needed, the bootloader transparently hands off execution to the existing application with no measurable overhead.
+
+**Continuous Integrity Verification:** Unlike simpler bootloaders, boot3 verifies the application's FNV1A-64 checksum on every single boot. This ensures that the device will never attempt to execute corrupted firmware (e.g., due to partial flash failure or accidental overwrite).
 
 ### Boot sequence
 
