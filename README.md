@@ -4,8 +4,6 @@ A generic, protocol-agnostic **Stage 3 (boot3) Bootloader** for the Raspberry Pi
 
 This project provides a robust framework for implementing Over-the-Air (OTA) firmware updates regardless of the communication medium. Whether your device is connected via Wi-Fi (CYW43439), UART, USB, CAN, SPI, or any other transport, this bootloader handles the critical application switching and update logic.
 
----
-
 ## Quick Start
 
 ### Prerequisites
@@ -48,7 +46,31 @@ pico_boot3_init(my_firmware)
 | `BOOT3_STATUS_LED_GPIO` | *(empty)* | GPIO for status LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
 | `BOOT3_PROGRAM_LED_GPIO` | *(empty)* | GPIO for programming-in-progress LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
 
----
+## LED Feedback (optional)
+
+When `BOOT3_STATUS_ENABLE` and `BOOT3_WS2812_ENABLE` are enabled:
+
+| LED colour | Meaning |
+|---|---|
+| Green | boot3 initialised, checking state, usually visible only ehen something hangs, as it quickly switch to blue |
+| Blue | boot3 checking state and calculating current and pending checksums |
+| Red | boot3 programming (copying) pending state to current |
+| Red blinking | blinks every one page (4096 bytes) is programmed into current state |
+
+## Limitations
+
+- Flash must be at least **2× the application size** (the flash is split in half).
+- The entire firmware binary (including boot2 and boot3) must be provided in the OTA image so that the pending state can be applied correctly.
+- Flash operations must be performed with interrupts disabled and while executing from RAM (the bootloader handles this internally for its own copy routine; your application must do the same when calling `boot3_flash_erase_pending_data` / `boot3_flash_program_pending_data`).
+- The boot3 code + state region occupies the first **8 KiB** of flash; application code starts at offset `0x2000`.
+
+## Roadmap
+
+Note: The following items are not listed by priority.
+
+- [ ] Add support for RP2350 (some code is currently hardcoded for RP2040)
+- [ ] Implement pending program signature verification to ensure only authorized firmware can be flashed to the current state
+- [ ] Consider adding support for bootloader reprogramming
 
 ## How It Works
 
@@ -93,8 +115,6 @@ Power-on / Reset
 
 Copy progress is recorded byte-by-byte in the 2 KiB progress region of the boot3 state (each byte represents one 4 KiB sector). If power is lost mid-copy, the bootloader detects the incomplete current state on the next boot (checksum mismatch) and resumes or retries the copy from the pending slot, which is never erased until the copy is verified complete.
 
----
-
 ## Flash Memory Layout
 
 ```
@@ -122,8 +142,6 @@ Copy progress is recorded byte-by-byte in the 2 KiB progress region of the boot3
 
 > **Note:** `PICO_FLASH_SIZE_BYTES` is automatically halved by the CMake integration so the SDK and application code always address only the current slot.
 
----
-
 ## Project Structure
 
 ```
@@ -148,8 +166,6 @@ rp2040-ota-bootloader/
 └── CMakeLists.txt           # Main build; exposes `boot3` interface library
 ```
 
----
-
 ## Public API
 
 Include `boot3.h` in your application code.
@@ -164,7 +180,7 @@ const struct Boot3State *boot3_get_current_state(void);
 const struct Boot3State *boot3_get_pending_state(void);
 ```
 
-### Flash operations (call with interrupts disabled)
+### Flash operations (call with interrupts disabled of flash_safe_execute function)
 
 ```c
 // Erase flash in the pending slot for a program of `len` bytes.
@@ -188,6 +204,8 @@ bool boot3_validate_state(const struct Boot3State *state);
 
 ```c
 // Compute a FNV1A-64 hash using the function pointer stored in the current state.
+// The function is stored in the bootloader, so the user program cannot access it directly.
+// In the future, if bootloader reprogramming is supported, the address may not be static.
 uint64_t boot3_fnv1a_64(const uint8_t *data, size_t len);
 ```
 
@@ -225,8 +243,6 @@ bool boot3_should_update(bool checksum_mismatch) {
 }
 ```
 
----
-
 ## Writing a Firmware Update (Transport-Agnostic)
 
 Regardless of how your device receives the new firmware (UART, USB, BLE, Wi-Fi, …), the flash-side procedure is always the same:
@@ -258,8 +274,6 @@ if (boot3_validate_state(boot3_get_pending_state())) {
     for (;;) tight_loop_contents();
 }
 ```
-
----
 
 ## Example: USB Serial OTA
 
@@ -294,8 +308,6 @@ The device will:
 4. Reboot (red LED briefly)
 5. boot3 applies the update and launches the new firmware
 
----
-
 ## Boot3 State Structure
 
 ```c
@@ -325,8 +337,6 @@ struct Boot3State {
 // Total: exactly 4096 bytes
 ```
 
----
-
 ## Tools
 
 ### `fnv1a_checksum` (host tool)
@@ -341,26 +351,3 @@ Usage: fnv1a_checksum <input.bin> <start_byte> [length|"calc"]
   calc         instead of computing a hash, output the remaining byte count as a 4-byte LE integer
                (used to populate boot3_state_program_size)
 ```
-
----
-
-## LED Feedback (optional)
-
-When `BOOT3_STATUS_ENABLE` and/or `BOOT3_WS2812_ENABLE` are enabled:
-
-| LED colour | Meaning |
-|---|---|
-| Green | boot3 initialised, checking state |
-| Red | boot3 exiting to application (no update) |
-| Blue *(example only)* | Application running |
-| Yellow *(example only)* | Programming pending slot |
-| Red *(example only)* | Rebooting |
-
----
-
-## Limitations
-
-- Flash must be at least **2× the application size** (the flash is split in half).
-- The entire firmware binary (including boot2 and boot3) must be provided in the OTA image so that the pending state can be applied correctly.
-- Flash operations must be performed with interrupts disabled and while executing from RAM (the bootloader handles this internally for its own copy routine; your application must do the same when calling `boot3_flash_erase_pending_data` / `boot3_flash_program_pending_data`).
-- The boot3 code + state region occupies the first **8 KiB** of flash; application code starts at offset `0x2000`.
