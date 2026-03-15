@@ -19,7 +19,8 @@ extern char __boot3_ram_start;
 extern char __boot3_bss;
 extern char __boot3_bss_end;
 
-#define BOOT3_ENABLE_XOSC 1
+// TODO: Fix clock_configure that is in the user program memory instead of boot3 flash
+#define BOOT3_ENABLE_XOSC 0
 
 #if BOOT3_WS2812_ENABLE
     #ifdef BOOT3_WS2812_GPIO
