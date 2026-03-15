@@ -71,6 +71,9 @@ Note: The following items are not listed by priority.
 - [ ] Add support for RP2350 (some code is currently hardcoded for RP2040)
 - [ ] Implement pending program signature verification to ensure only authorized firmware can be flashed to the current state
 - [ ] Consider adding support for bootloader reprogramming
+- [ ] Fix a known issue where the checksum and program size are not injected on the first build; currently, a second build is sometimes required for correct injection.
+
+---
 
 ## How It Works
 
