@@ -216,21 +216,37 @@ bool boot3_validate_state(const struct Boot3State *state);
 uint64_t boot3_fnv1a_64(const uint8_t *data, size_t len);
 ```
 
-### Update decision callback (override in your application)
+### User callbacks (can be overriden in your application)
 
 ```c
 // Weak function — override to customise when an update is applied.
 // `checksum_mismatch` is true when the pending checksum differs from the current one.
+//
 // Return true to apply the pending update, false to skip it.
+//
+// Default behaviour (when not overridden): update whenever checksums differ.
 bool boot3_should_update(bool checksum_mismatch);
+
+// Weak function — override to customise when a corrupted current state is 
+// recovered from the pending slot.
+// `checksum_mismatch` is true when the checksum saved in the current state does not match
+// the checksum recalculated from the actual program data in flash.
+//
+// Return true to recover from the pending state, false to skip recovery 
+// and boot the (possibly corrupt) current state.
+//
+// Default behaviour (when not overridden): recover whenever the current state
+// checksum does not match the program data in flash.
+
+bool boot3_should_recover(bool checksum_mismatch);
 ```
 
-Default behaviour (when not overridden): update whenever checksums differ.
+`boot3_should_recover` - this callback is invoked only when the current state is considered **invalid** — either its magic value is wrong, or its stored checksum does not match the program data actually present in flash (indicating a failed or partial write). If a valid pending state exists at the time of recovery, the bootloader will copy it over the current slot.
 
-**WARNING:** This function runs in the bootloader context. At this stage, user application code and RAM data are NOT loaded and MUST NOT be accessed.
+**WARNING:** These functions run in the bootloader context. At this stage, user application code and RAM data are NOT loaded and MUST NOT be accessed.
 Attempting to use user code or RAM data will result in a corrupted state and undefined behavior.
 
-**Note:** This function cannot be placed in RAM, as it will not be loaded there when the bootloader starts. If the function needs to use any peripherals, it must initialize them itself. Accessing GPIO, ADC, or other hardware is possible, but keep in mind that these peripherals are almost certainly uninitialized at this stage. 
+**Note:** These functions cannot be placed in RAM, as they will not be loaded there when the bootloader starts. If the function needs to use any peripherals, it must initialize them itself. Accessing GPIO, ADC, or other hardware is possible, but keep in mind that these peripherals are almost certainly uninitialized at this stage.
 
 ### User data
 

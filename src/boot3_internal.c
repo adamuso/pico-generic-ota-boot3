@@ -215,6 +215,11 @@ void in_boot3_section boot3_internal_check_state()
         should_update = current_state->data.config.should_update(should_update);
     }
 
+    if (!current_state_valid && current_state->data.config.should_recover != NULL) 
+    {
+        current_state_valid = !current_state->data.config.should_recover(should_update);
+    }
+
     // Pending state is valid when:
     // - It has the correct magic value
     // - Its program size is not larger than half of the flash size (since we store the pending state 

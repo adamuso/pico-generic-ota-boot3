@@ -18,6 +18,7 @@ struct Boot3StateInternalData boot3_current_state_data __attribute__((section(".
         .flash_binary_end = (uint8_t *)&__flash_binary_end,
         .should_update = &boot3_should_update,
         .fnv1a_64 = &boot3_internal_fnv1a_64,
+        .should_recover = &boot3_should_recover,
     },
 };
 
