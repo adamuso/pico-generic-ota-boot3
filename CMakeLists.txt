@@ -10,6 +10,11 @@ project(rp2040_boot3 C CXX ASM)
 
 # Option to control injection (on by default)
 option(BOOT3_INJECT_MEMMAP "Inject .boot3 section into pico SDK memmap_default.ld" ON)
+option(BOOT3_WS2812_ENABLE "Enable WS2812 support in .boot3" OFF)
+option(BOOT3_STATUS_ENABLE "Enable status/program LED support in .boot3" OFF)
+set(BOOT3_WS2812_GPIO "" CACHE STRING "GPIO number for WS2812 data line (PICO_DEFAULT_WS2812_PIN used if not set)")
+set(BOOT3_STATUS_LED_GPIO "" CACHE STRING "GPIO number for status LED (PICO_DEFAULT_LED_PIN used if not set)")
+set(BOOT3_PROGRAM_LED_GPIO "" CACHE STRING "GPIO number for program LED")
 
 set(PICO_FLASH_SIZE_BYTES "${PICO_FLASH_SIZE_BYTES} / 2" PARENT_SCOPE)
 
@@ -23,7 +28,7 @@ set(BOOT3_MEMMAP_PATH "${PICO_SDK_PATH}/src/rp2_common/pico_crt0/rp2040/memmap_d
 # Non-invasive injection: do NOT modify files under the pico-sdk source tree.
 # Instead generate a modified linker script in the CMake binary dir and expose
 # its path to callers. This keeps the SDK folder immutable.
-set(MEMMAP_GENERATED "${CMAKE_BINARY_DIR}/boot3_memmap.ld")
+set(BOOT3_MEMMAP_GENERATED "${CMAKE_BINARY_DIR}/boot3_memmap.ld")
 
 if(BOOT3_INJECT_MEMMAP)
     if(EXISTS ${BOOT3_MEMMAP_PATH})
@@ -46,8 +51,8 @@ if(BOOT3_INJECT_MEMMAP)
 
         if(NOT "${_mem}" STREQUAL "${_new_mem}")
             # write modified file into build dir (non-invasive)
-            file(WRITE "${MEMMAP_GENERATED}" "${_new_mem}")
-            message(STATUS "Generated injected memmap at ${MEMMAP_GENERATED} (pico-sdk left unchanged)")
+            file(WRITE "${BOOT3_MEMMAP_GENERATED}" "${_new_mem}")
+            message(STATUS "Generated injected memmap at ${BOOT3_MEMMAP_GENERATED} (pico-sdk left unchanged)")
         else()
             message(STATUS "No injection needed; .boot3 already present or insertion point not found in ${BOOT3_MEMMAP_PATH}")
         endif()
@@ -81,10 +86,10 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tools/fnv1a_checksum)
 target_link_libraries(boot3 INTERFACE $<TARGET_OBJECTS:boot3_image>)
 
 # Expose the path as an internal cached variable for callers
-if(EXISTS "${MEMMAP_GENERATED}")
-    set(BOOT3_MEMMAP_INJECTED "${MEMMAP_GENERATED}" CACHE INTERNAL "Path of generated memmap file injected with .boot3")
+if(EXISTS "${BOOT3_MEMMAP_GENERATED}")
+    set(BOOT3_MEMMAP_INJECTED "${BOOT3_MEMMAP_GENERATED}" CACHE INTERNAL "Path of generated memmap file injected with .boot3")
 else()
-    set(BOOT3_MEMMAP_INJECTED "${MEMMAP_DEFAULT}" CACHE INTERNAL "Path of memmap file (original pico-sdk)")
+    unset(BOOT3_MEMMAP_INJECTED CACHE)
 endif()
 
 # A command that will inject the .boot3 section into a given memmap file and write the result to a specified output path. This is for users who want to do the injection themselves or need to support older CMake versions that don't have the `file(READ/WRITE)` commands used above.

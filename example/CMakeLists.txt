@@ -12,6 +12,12 @@ set(PICO_BOARD waveshare_rp2040_zero)
 
 include(${PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
+set(BOOT3_WS2812_ENABLE ON)
+set(BOOT3_STATUS_ENABLE ON)
+# set(BOOT3_STATUS_LED_GPIO 7)
+# set(BOOT3_PROGRAM_LED_GPIO 7)
+# set(BOOT3_WS2812_GPIO 5)
+
 # If this example is configured on its own (out-of-tree relative to the
 # repository root) we must provide an explicit binary directory when
 # adding a source directory that lives outside this source dir.
@@ -43,7 +49,7 @@ target_link_libraries(example_serial_ota PRIVATE
 )
 
 target_link_options(example_serial_ota PUBLIC 
-    "-Wl,-Map=bare_blink.map"
+    "-Wl,-Map=example_serial_ota.map"
     "-Wl,--cref"
     "-Wl,--print-memory-usage"
 )

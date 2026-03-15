@@ -118,7 +118,7 @@ static void in_boot3_critical_section boot3_internal_copy_pending_to_current_and
 
         if (i % FLASH_SECTOR_SIZE == 0) 
         {
-            gpio_put(8, toggle);
+            boot3_program_led_set(toggle);
             toggle = !toggle;
         }
 
@@ -149,7 +149,7 @@ static void in_boot3_critical_section boot3_internal_copy_pending_to_current_and
     // current_state won't match, this will cause retry of the copy process until it is complete. 
     boot3_flash_range_erase(FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
 
-    gpio_put(7, 0);
+    boot3_status_led_set(0);
 
     for (size_t i = 0; i < sizeof(struct Boot3State); i += sizeof(buffer)) {
         // Copy a chunk of the pending state from flash to RAM buffer
@@ -159,7 +159,7 @@ static void in_boot3_critical_section boot3_internal_copy_pending_to_current_and
         boot3_flash_range_program(4096 + i, buffer, sizeof(buffer));
     }
 
-    gpio_put(7, 1);
+    boot3_status_led_set(1);
 
 #if 0 // TODO: Should we allow for repropgramming our boot3 bootloader when new program is flashed?
     boot3_flash_range_erase(0, 8192);
@@ -184,7 +184,7 @@ static void in_boot3_critical_section boot3_internal_copy_pending_to_current_and
 
     restore_interrupts(ints);
 
-    gpio_put(8, 0);
+    boot3_program_led_set(0);
 
     boot3_internal_exit();
 }
@@ -194,7 +194,7 @@ void in_boot3_section boot3_internal_check_state()
     const struct Boot3State* current_state = boot3_get_current_state();
     const struct Boot3State* pending_state = boot3_get_pending_state();
 
-    gpio_put(7, 1);
+    boot3_status_led_set(1);
 
     // When current state is invalid, we need to try recover from the second slot if possible
     bool current_state_valid = current_state->prelude.magic == BOOT3_STATE_MAGIC && 
@@ -233,14 +233,14 @@ void in_boot3_section boot3_internal_check_state()
                 (uint8_t *)&__boot3_end + (PICO_FLASH_SIZE_BYTES / 2), pending_state->prelude.program_size
             ) == pending_state->prelude.checksum
         ) {
-            gpio_put(8, 1);
+            boot3_program_led_set(1);
 
             boot3_internal_copy_pending_to_current_and_exit();
             for (;;);
         }
     }
 
-    gpio_put(7, 0);
+    boot3_status_led_set(0);
 }
 
 void in_boot3_section boot3_gpio_set_function(uint gpio, gpio_function_t fn) {
@@ -264,15 +264,27 @@ void in_boot3_section boot3_main(void)
 {
     boot3_internal_copyout();
 
+#if BOOT3_STATUS_ENABLE 
     reset_unreset_block_num_wait_blocking(RESET_IO_BANK0);
     reset_unreset_block_num_wait_blocking(RESET_PADS_BANK0);
 
-    // TODO: Add defines for the GPIOs we use for progress indication, instead of hardcoding 7 and 8 here.
-    // Also allow to disable them when user does not want that.
-    boot3_gpio_set_function(7, GPIO_FUNC_SIO);
-    gpio_set_dir(7, GPIO_OUT);
-    boot3_gpio_set_function(8, GPIO_FUNC_SIO);
-    gpio_set_dir(8, GPIO_OUT);
+    #ifdef BOOT3_STATUS_LED_GPIO_PIN
+        boot3_gpio_set_function(BOOT3_STATUS_LED_GPIO_PIN, GPIO_FUNC_SIO);
+        gpio_set_dir(BOOT3_STATUS_LED_GPIO_PIN, GPIO_OUT);
+    #endif
+
+    #ifdef BOOT3_PROGRAM_LED_GPIO_PIN
+        boot3_gpio_set_function(BOOT3_PROGRAM_LED_GPIO_PIN, GPIO_FUNC_SIO);
+        gpio_set_dir(BOOT3_PROGRAM_LED_GPIO_PIN, GPIO_OUT);
+    #endif
+
+    #ifdef BOOT3_WS2812_GPIO_PIN
+        boot3_gpio_set_function(BOOT3_WS2812_GPIO_PIN, GPIO_FUNC_SIO);
+        gpio_set_dir(BOOT3_WS2812_GPIO_PIN, GPIO_OUT);
+        boot3_ws2812_reset(BOOT3_WS2812_GPIO_PIN);
+        boot3_ws2812_transmit(BOOT3_WS2812_GPIO_PIN, 0, 128, 0);
+    #endif
+#endif
 
     boot3_internal_check_state();
     

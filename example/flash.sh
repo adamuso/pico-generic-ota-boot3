@@ -1,4 +1,4 @@
 #/bin/sh
 set -e
 
-cp build/bare_blink.uf2 /media/adam/RPI-RP2/
+cp build/example_serial_ota.uf2 /media/adam/RPI-RP2/

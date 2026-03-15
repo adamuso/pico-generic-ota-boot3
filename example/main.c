@@ -21,7 +21,7 @@ struct Boot3UserData
 };
 
 struct Boot3UserData in_boot3_user_data boot3_user_data = {
-    .version = 2,
+    .version = 4,
 };
 
 bool boot3_should_update(bool checksum_mismatch) 
@@ -67,7 +67,7 @@ int main(void) {
     //     sleep_ms(15);
     // }
 
-    uint8_t* new_program = malloc(64 * 1024);
+    uint8_t* new_program = malloc(200 * 1024);
     int read = 0;
     size_t offset = 0;
 
@@ -81,10 +81,10 @@ int main(void) {
 
     while ((read = stdio_get_until(new_program + offset, 256, timeout)) >= 0)
     {
-        if (offset + read > 64 * 1024) 
+        if (offset + read > 200 * 1024) 
         {
             offset = 0;
-            printf("Received program is too large, max size is 64KB\n");
+            printf("Received program is too large, max size is 200KB\n");
             break;
         }
 

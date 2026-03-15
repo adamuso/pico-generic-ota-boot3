@@ -9,6 +9,7 @@ add_library(boot3_image OBJECT
     boot3_internal.c
     boot3_state.c
     boot3_flash.c
+    $<IF:$<BOOL:${BOOT3_WS2812_ENABLE}>,boot3_ws2812.c,>
 )
 
 # set_target_properties(boot3_image PROPERTIES
@@ -43,6 +44,7 @@ if(DEFINED PICO_SDK_PATH)
         ${PICO_SDK_PATH}/src/rp2_common/hardware_irq/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_resets/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_sync/include
+        ${PICO_SDK_PATH}/src/rp2_common/hardware_timer/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_sync_spin_lock/include
         ${PICO_SDK_PATH}/src/rp2_common/pico_flash/include
         ${PICO_SDK_PATH}/src/rp2040/hardware_regs/include
@@ -50,6 +52,14 @@ if(DEFINED PICO_SDK_PATH)
         ${PICO_SDK_PATH}/src/rp2040/pico_platform/include
     )
 endif()
+
+target_compile_definitions(boot3_image PRIVATE
+    BOOT3_WS2812_ENABLE=$<BOOL:${BOOT3_WS2812_ENABLE}>
+    BOOT3_STATUS_ENABLE=$<BOOL:${BOOT3_STATUS_ENABLE}>
+    $<IF:$<BOOL:${BOOT3_WS2812_GPIO}>,BOOT3_WS2812_GPIO=${BOOT3_WS2812_GPIO},>
+    $<IF:$<BOOL:${BOOT3_STATUS_LED_GPIO}>,BOOT3_STATUS_LED_GPIO=${BOOT3_STATUS_LED_GPIO},>
+    $<IF:$<BOOL:${BOOT3_PROGRAM_LED_GPIO}>,BOOT3_PROGRAM_LED_GPIO=${BOOT3_PROGRAM_LED_GPIO},>
+)
 
 target_include_directories(boot3_image PRIVATE
     ${CMAKE_BINARY_DIR}/generated/pico_base
