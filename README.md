@@ -227,23 +227,7 @@ uint64_t boot3_fnv1a_64(const uint8_t *data, size_t len);
 //
 // Default behaviour (when not overridden): update whenever checksums differ.
 bool boot3_should_update(bool checksum_mismatch);
-
-// Weak function — override to customise when a corrupted current state is 
-// recovered from the pending slot.
-// `checksum_mismatch` is true when the checksum saved in the current state does not match
-// the checksum recalculated from the actual program data in flash.
-// `force_update` allows for forcing the boot even if the checksum is invalid
-//
-// Return true to recover from the pending state, false to skip recovery 
-// and boot the (possibly corrupt) current state if `force_boot` is set to true
-// or hang the processor if not.
-//
-// Default behaviour (when not overridden): recover whenever the current state
-// checksum does not match the program data in flash.
-bool boot3_should_recover(bool checksum_mismatch, bool* force_boot);
 ```
-
-`boot3_should_recover` - this callback is invoked only when the current state is considered **invalid** — either its magic value is wrong, or its stored checksum does not match the program data actually present in flash (indicating a failed or partial write). If a valid pending state exists at the time of recovery, the bootloader will copy it over the current slot.
 
 **WARNING:** These functions run in the bootloader context. At this stage, user application code and RAM data are NOT loaded and MUST NOT be accessed.
 Attempting to use user code or RAM data will result in a corrupted state and undefined behavior.

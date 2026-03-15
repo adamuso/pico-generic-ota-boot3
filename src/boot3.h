@@ -27,7 +27,6 @@ struct Boot3StateConfig
     uint8_t* flash_binary_end;
     bool (*should_update)(bool checksum_mismatch);
     uint64_t (*fnv1a_64)(const uint8_t *data, size_t len);
-    bool (*should_recover)(bool checksum_mismatch, bool* force_boot);
 };
 
 struct Boot3StateCopyProgress
@@ -107,13 +106,3 @@ void __attribute__((noreturn)) boot3_reboot_request_update();
 /// @param checksum_mismatch Indicates if there is a checksum mismatch between the current and pending state
 /// @return true if the program should be updated, false otherwise
 bool __attribute__((weak)) boot3_should_update(bool checksum_mismatch);
-
-/// @brief Determine if the current state should be recovered from the pending state. This is a weak function that can be overridden 
-/// by the user to provide custom logic for determining whether to recover the current state from the pending state when the current 
-/// state is invalid. Current state is invalid when it has an invalid magic value, or its checksum does not match the program data in flash. 
-/// When no function is provided by the user, the default behavior is to recover whenever there is a mismatch between checksum saved
-/// in the current state and the checksum calculated from actual program data in flash.
-/// @param checksum_mismatch Indicates if there is a checksum mismatch between the current and pending state
-/// @param force_boot Indicates if the boot process should be forced even if cheksum is invalid
-/// @return true if the current state should be recovered, false otherwise
-bool __attribute__((weak)) boot3_should_recover(bool checksum_mismatch, bool* force_boot);

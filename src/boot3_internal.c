@@ -222,28 +222,8 @@ void in_boot3_section boot3_internal_check_state()
         should_update = current_state->data.config.should_update(checksum_mismatch);
     }
 
-    if (!current_state_valid && current_state->data.config.should_recover != NULL) 
-    {
-        bool should_recover = current_state->data.config.should_recover(checksum_mismatch, &current_state_valid);
-
-        if (!should_recover && !current_state_valid)
-        {
-            // Hang because what else we can do?
-            // Signal state recovery failure by lighting up the program LED if available, and keeping the status LED off.
-            boot3_status_led_set(0);
-            boot3_program_led_set(1);
-
-#if BOOT3_WS2812_ENABLE && defined(BOOT3_WS2812_GPIO_PIN)
-            // Purple color to indicate recovery failure
-            boot3_ws2812_reset(BOOT3_WS2812_GPIO_PIN);
-            boot3_ws2812_transmit(BOOT3_WS2812_GPIO_PIN, 128, 0, 128); 
-#endif
-            for (;;) tight_loop_contents();
-        }
-    }
-
 #if !BOOT3_AUTO_UPDATE
-    // Clear now, because should_update or should_recover might want to read this value
+    // Clear now, because should_update might want to read this value
     if (watchdog_hw->scratch[0] == BOOT3_STATE_MAGIC) {
         watchdog_hw->scratch[0] = 0;
     }
