@@ -342,12 +342,21 @@ void in_boot3_critical_section boot3_ws2812_reset(int gpio)
     gpio_put(gpio, false);
     uint32_t ints = save_and_disable_interrupts();
 
+#if BOOT3_ENABLE_XOSC
+    // 1 + 3 * 210 + 1 = 632 CPU cycles = 632 * 0.083us = 52.456us
+    asm volatile(
+        "mov  r0, #210\n"    	// 1 cycle
+        "4: sub  r0, r0, #1\n"	// 1 cycle
+        "bne   4b\n"          	// 2 cycles if loop taken, 1 if not
+    );
+#else
     // 1 + 3 * 90 + 1 = 272 CPU cycles = 272 * 0.2us = 54.4us
     asm volatile(
         "mov  r0, #90\n"    	// 1 cycle
         "4: sub  r0, r0, #1\n"	// 1 cycle
         "bne   4b\n"          	// 2 cycles if loop taken, 1 if not
     );
+#endif
 
     restore_interrupts(ints);
 }
