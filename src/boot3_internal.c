@@ -272,7 +272,7 @@ void in_boot3_section boot3_gpio_set_function(uint gpio, gpio_function_t fn) {
 
 // The DELAY field in xosc_hw->startup is 14 bits wide.
 #if STARTUP_DELAY >= (1 << 13)
-#error PICO_XOSC_STARTUP_DELAY_MULTIPLIER is too large: XOSC STARTUP.DELAY must be < 8192
+#error PICO_XOSC_STARTUP_DELAY_MULTIPLIER is too large: XOSC STARTUP.DELAY must be < 8192 
 #endif
 
 void in_boot3_section boot3_main(void) 
@@ -297,7 +297,7 @@ void in_boot3_section boot3_main(void)
     clock_configure(
         clk_ref,
         CLOCKS_CLK_REF_CTRL_SRC_VALUE_XOSC_CLKSRC,
-        0, // Brak dodatkowego wejścia pomocniczego (aux)
+        0,
         12 * MHZ,
         12 * MHZ
     );

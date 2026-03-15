@@ -14,7 +14,7 @@ option(BOOT3_WS2812_ENABLE "Enable WS2812 support in .boot3" OFF)
 option(BOOT3_STATUS_ENABLE "Enable status/program LED support in .boot3" OFF)
 set(BOOT3_WS2812_GPIO "" CACHE STRING "GPIO number for WS2812 data line (PICO_DEFAULT_WS2812_PIN used if not set)")
 set(BOOT3_STATUS_LED_GPIO "" CACHE STRING "GPIO number for status LED (PICO_DEFAULT_LED_PIN used if not set)")
-set(BOOT3_PROGRAM_LED_GPIO "" CACHE STRING "GPIO number for program LED")
+set(BOOT3_PROGRAM_LED_GPIO "" CACHE STRING "GPIO number for program LED (PICO_DEFAULT_LED_PIN used if not set)")
 
 set(PICO_FLASH_SIZE_BYTES "${PICO_FLASH_SIZE_BYTES} / 2" PARENT_SCOPE)
 
