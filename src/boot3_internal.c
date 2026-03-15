@@ -217,7 +217,22 @@ void in_boot3_section boot3_internal_check_state()
 
     if (!current_state_valid && current_state->data.config.should_recover != NULL) 
     {
-        current_state_valid = !current_state->data.config.should_recover(should_update);
+        bool should_recover = current_state->data.config.should_recover(should_update, &current_state_valid);
+
+        if (!should_recover && !current_state_valid)
+        {
+            // Hang because what else we can do?
+            // Signal state recovery failure by lighting up the program LED if available, and keeping the status LED off.
+            boot3_status_led_set(0);
+            boot3_program_led_set(1);
+
+#if BOOT3_WS2812_ENABLE && defined(BOOT3_WS2812_GPIO_PIN)
+            // Purple color to indicate recovery failure
+            boot3_ws2812_reset(BOOT3_WS2812_GPIO_PIN);
+            boot3_ws2812_transmit(BOOT3_WS2812_GPIO_PIN, 128, 0, 128); 
+#endif
+            for (;;) tight_loop_contents();
+        }
     }
 
     // Pending state is valid when:
@@ -245,7 +260,7 @@ void in_boot3_section boot3_internal_check_state()
             boot3_program_led_set(1);
 
             boot3_internal_copy_pending_to_current_and_exit();
-            for (;;);
+            for (;;) tight_loop_contents();
         }
     }
 
