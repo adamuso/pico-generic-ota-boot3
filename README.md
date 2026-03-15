@@ -227,6 +227,11 @@ bool boot3_should_update(bool checksum_mismatch);
 
 Default behaviour (when not overridden): update whenever checksums differ.
 
+**WARNING:** This function runs in the bootloader context. At this stage, user application code and RAM data are NOT loaded and MUST NOT be accessed.
+Attempting to use user code or RAM data will result in a corrupted state and undefined behavior.
+
+**Note:** This function cannot be placed in RAM, as it will not be loaded there when the bootloader starts. If the function needs to use any peripherals, it must initialize them itself. Accessing GPIO, ADC, or other hardware is possible, but keep in mind that these peripherals are almost certainly uninitialized at this stage. 
+
 ### User data
 
 Place persistent data in the 1 KiB user data region of the boot3 state:
