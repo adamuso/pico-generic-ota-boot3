@@ -1,6 +1,6 @@
 # pico-generic-ota-boot3
 
-A generic, protocol-agnostic **Stage 3 (boot3) Bootloader** for the Raspberry Pi Silicon family (currently only **RP2040**, but **RP2350** maybe added in the future).
+A generic, protocol-agnostic **Stage 3 (boot3) Bootloader** for the Raspberry Pi Silicon family (currently only **RP2040**, but **RP2350** may be added in the future).
 
 This project provides a robust framework for implementing Over-the-Air (OTA) firmware updates regardless of the communication medium. Whether your device is connected via Wi-Fi (CYW43439), UART, USB, CAN, SPI, or any other transport, this bootloader handles the critical application switching and update logic.
 
