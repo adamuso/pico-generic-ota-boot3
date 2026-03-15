@@ -6,6 +6,50 @@ This project provides a robust framework for implementing Over-the-Air (OTA) fir
 
 ---
 
+## Quick Start
+
+### Prerequisites
+
+- [pico-sdk](https://github.com/raspberrypi/pico-sdk) (included as a submodule in `lib/pico-sdk` or provided via `PICO_SDK_PATH`)
+- CMake ≥ 3.22
+- ARM GCC toolchain (`arm-none-eabi-gcc`)
+
+### Adding boot3 to your project
+
+**1. Add as a subdirectory** (recommended — either as a submodule or a copy):
+
+```cmake
+# In your project's CMakeLists.txt, before pico_sdk_init()
+add_subdirectory(path/to/rp2040-ota-bootloader)
+
+project(my_project C CXX ASM)
+pico_sdk_init()
+
+add_executable(my_firmware main.c)
+target_link_libraries(my_firmware PRIVATE pico_stdlib)
+
+# Attach boot3 to your target: injects linker script and post-build checksum step
+pico_boot3_init(my_firmware)
+```
+
+`pico_boot3_init` does three things automatically:
+- Switches the linker script to the generated `boot3_memmap.ld` (which reserves the boot3 section)
+- Links your target against the `boot3` interface library (includes compiled boot3 objects)
+- Adds a post-build command that computes the FNV1A-64 checksum of the binary and embeds it into `.boot3_state_checksum` in the ELF
+
+### CMake options
+
+| Option | Default | Description |
+|---|---|---|
+| `BOOT3_INJECT_MEMMAP` | `ON` | Generate an injected `memmap_default.ld` with the `.boot3` section. Disable only if managing the linker script manually. |
+| `BOOT3_WS2812_ENABLE` | `OFF` | Compile WS2812 LED driver into boot3. LED feedback during update. |
+| `BOOT3_STATUS_ENABLE` | `OFF` | Enable status/program LED GPIOs during boot. |
+| `BOOT3_WS2812_GPIO` | *(empty)* | GPIO pin for WS2812 data. Falls back to `PICO_DEFAULT_WS2812_PIN`. |
+| `BOOT3_STATUS_LED_GPIO` | *(empty)* | GPIO for status LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
+| `BOOT3_PROGRAM_LED_GPIO` | *(empty)* | GPIO for programming-in-progress LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
+
+---
+
 ## How It Works
 
 The bootloader splits flash into two equal halves:
@@ -103,50 +147,6 @@ rp2040-ota-bootloader/
 ├── boot3.ld                 # Linker script fragment injected into pico SDK memmap
 └── CMakeLists.txt           # Main build; exposes `boot3` interface library
 ```
-
----
-
-## Integration
-
-### Prerequisites
-
-- [pico-sdk](https://github.com/raspberrypi/pico-sdk) (included as a submodule in `lib/pico-sdk` or provided via `PICO_SDK_PATH`)
-- CMake ≥ 3.22
-- ARM GCC toolchain (`arm-none-eabi-gcc`)
-
-### Adding boot3 to your project
-
-**1. Add as a subdirectory** (recommended — either as a submodule or a copy):
-
-```cmake
-# In your project's CMakeLists.txt, before pico_sdk_init()
-add_subdirectory(path/to/rp2040-ota-bootloader)
-
-project(my_project C CXX ASM)
-pico_sdk_init()
-
-add_executable(my_firmware main.c)
-target_link_libraries(my_firmware PRIVATE pico_stdlib)
-
-# Attach boot3 to your target: injects linker script and post-build checksum step
-pico_boot3_init(my_firmware)
-```
-
-`pico_boot3_init` does three things automatically:
-- Switches the linker script to the generated `boot3_memmap.ld` (which reserves the boot3 section)
-- Links your target against the `boot3` interface library (includes compiled boot3 objects)
-- Adds a post-build command that computes the FNV1A-64 checksum of the binary and embeds it into `.boot3_state_checksum` in the ELF
-
-### CMake options
-
-| Option | Default | Description |
-|---|---|---|
-| `BOOT3_INJECT_MEMMAP` | `ON` | Generate an injected `memmap_default.ld` with the `.boot3` section. Disable only if managing the linker script manually. |
-| `BOOT3_WS2812_ENABLE` | `OFF` | Compile WS2812 LED driver into boot3. LED feedback during update. |
-| `BOOT3_STATUS_ENABLE` | `OFF` | Enable status/program LED GPIOs during boot. |
-| `BOOT3_WS2812_GPIO` | *(empty)* | GPIO pin for WS2812 data. Falls back to `PICO_DEFAULT_WS2812_PIN`. |
-| `BOOT3_STATUS_LED_GPIO` | *(empty)* | GPIO for status LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
-| `BOOT3_PROGRAM_LED_GPIO` | *(empty)* | GPIO for programming-in-progress LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
 
 ---
 
