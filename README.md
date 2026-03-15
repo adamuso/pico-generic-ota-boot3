@@ -351,3 +351,12 @@ Usage: fnv1a_checksum <input.bin> <start_byte> [length|"calc"]
   calc         instead of computing a hash, output the remaining byte count as a 4-byte LE integer
                (used to populate boot3_state_program_size)
 ```
+## License
+
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
+
+Portions of [`src/boot3_flash.c`](src/boot3_flash.c) are derived from the
+[Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk)
+(`hardware_flash/flash.c`), which is Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+and licensed under the **BSD 3-Clause License**. The full BSD-3-Clause text is
+reproduced in the [LICENSE](LICENSE) file.

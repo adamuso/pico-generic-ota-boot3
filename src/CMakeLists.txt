@@ -1,7 +1,3 @@
-# include(${PICO_SDK_PATH}/external/pico_sdk_import.cmake)
-
-# pico_sdk_init()
-
 # Build an object library containing the boot3 image (assembly + C).
 add_library(boot3_image OBJECT
     boot3.S

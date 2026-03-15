@@ -1,3 +1,5 @@
+/* Copyright (c) 2026 Adam Ogiba - Licensed under MIT */
+
 // TODO: Somehow get this from project config instead of hardcoding it here
 #define PICO_RP2040 1
 

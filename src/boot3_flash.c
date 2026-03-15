@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2026 Adam Ogiba
+ * SPDX-License-Identifier: MIT
+ *
+ * This file contains code derived from the Raspberry Pi Pico SDK
+ * (hardware_flash/flash.c), which is:
+ *   Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ * The derived portions are marked below.
+ */
+
 // TODO: Somehow get this from project config instead of hardcoding it here
 #define PICO_RP2040 1
 
@@ -21,7 +32,19 @@
 #define __not_in_flash_func(func_name) __not_in_flash(__STRING(func_name)) func_name
 #define __no_inline_not_in_flash_func(func_name) __noinline __not_in_flash_func(func_name)
 
+// Below code is copied from hardware_flash/flash.c, with some modifications to be suitable for calling from the 
+// boot3 critical section, and to avoid depending on any flash code that is not in the ROM.
 
+// Modifications include:
+// - Changing sections where the code and data is placed to be in the boot3 critical section
+// - Changing name of some function so they are not confused with the flash functions in hardware/flash.c 
+//   that are used by the main application code, and to make it clear that they are for internal use in boot3
+
+/*
+ * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #define FLASH_BLOCK_ERASE_CMD 0xd8
 
 typedef struct flash_hardware_save_state {

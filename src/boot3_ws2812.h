@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Adam Ogiba - Licensed under MIT */
 #pragma once
 
 #include <stdint.h>

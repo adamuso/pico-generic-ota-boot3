@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Adam Ogiba - Licensed under MIT */
 #include <stddef.h>
 #include <stdint.h>
 
