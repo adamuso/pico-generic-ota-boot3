@@ -18,6 +18,8 @@ extern char __boot3_ram_start;
 extern char __boot3_bss;
 extern char __boot3_bss_end;
 
+#define BOOT3_ENABLE_XOSC 1
+
 #if BOOT3_WS2812_ENABLE
     #ifdef BOOT3_WS2812_GPIO
         #define BOOT3_WS2812_GPIO_PIN BOOT3_WS2812_GPIO

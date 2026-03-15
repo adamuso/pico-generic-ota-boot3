@@ -9,55 +9,215 @@
 #include "hardware/timer.h"
 #include "boot3_ws2812.h"
 
-// static void __always_inline in_boot3_critical_section boot3_ws2812_transmit_bit(int gpio_mask, uint8_t bit)
-// {
-//     if (!bit)
-//     {
-//         gpio_set_mask(gpio_mask);
-
-//         asm volatile(
-//             "mov  r0, #0\n"         // 1 cycle
-//         );
-
-//         gpio_clr_mask(gpio_mask);
-//     }
-//     else
-//     {
-//         gpio_set_mask(gpio_mask);
-
-//         asm volatile(
-//             "mov  r0, #13\n"    	// 1 cycle
-//             "mov  r0, #13\n"    	// 1 cycle
-//             "mov  r0, #13\n"    	// 1 cycle
-//         );
-
-//         gpio_clr_mask(gpio_mask);
-//     }
-// }
-
+#if BOOT3_ENABLE_XOSC
 void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t data)
 {
+    // 12MHz
+    // 1 cycle = 0.083us
+
     int mask = 1 << gpio;
     uint32_t moved_data = data << 24;
 
-    // boot3_ws2812_transmit_bit(mask, data & 0x80);
-    // boot3_ws2812_transmit_bit(mask, data & 0x40);
-    // boot3_ws2812_transmit_bit(mask, data & 0x20);
-    // boot3_ws2812_transmit_bit(mask, data & 0x10);
-    // boot3_ws2812_transmit_bit(mask, data & 0x08);
-    // boot3_ws2812_transmit_bit(mask, data & 0x04);
-    // boot3_ws2812_transmit_bit(mask, data & 0x02);
-    // boot3_ws2812_transmit_bit(mask, data & 0x01);
-   
     asm volatile(
         ".syntax unified\n"
-        // "mov r0, %[data]\n"    	                    // 1 cycle
 
         // bit 8
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    8f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    8f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "8:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        
+        // bit 7
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    7f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "7:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        // bit 6
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    6f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "6:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        // bit 5
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    5f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "5:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        // bit 4
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    4f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "4:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        // bit 3
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    3f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "3:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+
+        // bit 2
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    2f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "2:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        
+        // bit 1
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "bcs    1f\n"                               // 1 cycle if not taken, 3 cycles if taken
+
+        "str %[mask], [%[sio], %[clr_off]]\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+
+        "1:\n"
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "str %[mask], [%[sio], %[clr_off]]\n"       // 1 cycle
+        "nop\n"                                     // 1 cycle
+        "nop\n"                                     // 1 cycle
+        : [v] "+l" (moved_data)
+        : [sio] "r" (SIO_BASE), [set_off] "r" (SIO_GPIO_OUT_SET_OFFSET), [clr_off] "r" (SIO_GPIO_OUT_CLR_OFFSET), [mask] "r" (mask)
+        : "cc"
+    );
+}
+#else
+void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t data)
+{
+    int mask = 1 << gpio;
+    uint32_t moved_data = data << 24;
+
+    asm volatile(
+        ".syntax unified\n"
+
+        // bit 8
+        "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
+        
+        "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
+        "bcs    8f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -70,7 +230,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    7f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "bcs    7f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -83,7 +243,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    6f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "bcs    6f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -97,7 +257,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    5f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "bcs    5f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -110,7 +270,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    4f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "bcs    4f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -124,7 +284,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    3f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "bcs    3f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -138,7 +298,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    2f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "bcs    2f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -152,7 +312,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         "lsls %[v], %[v], #1\n"                         // 1 cycle: sets carry bit
         
         "str %[mask], [%[sio], %[set_off]]\n"       // 1 cycle
-        "bcs    1f\n"                               // 1 cycle if not taken, 3 cycles if taken (branch to label 1 if bit == 0)
+        "bcs    1f\n"                               // 1 cycle if not taken, 3 cycles if taken
 
         "str %[mask], [%[sio], %[clr_off]]\n"
         "nop\n"                                     // 1 cycle
@@ -166,6 +326,7 @@ void in_boot3_critical_section boot3_ws2812_transmit_color(int gpio, uint8_t dat
         : "cc"
     );
 }
+#endif
 
 void in_boot3_critical_section boot3_ws2812_transmit(int gpio, uint8_t r, uint8_t g, uint8_t b)
 {

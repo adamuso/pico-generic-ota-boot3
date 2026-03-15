@@ -45,6 +45,8 @@ if(DEFINED PICO_SDK_PATH)
         ${PICO_SDK_PATH}/src/rp2_common/hardware_resets/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_sync/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_timer/include
+        ${PICO_SDK_PATH}/src/rp2_common/hardware_xosc/include
+        ${PICO_SDK_PATH}/src/rp2_common/hardware_clocks/include
         ${PICO_SDK_PATH}/src/rp2_common/hardware_sync_spin_lock/include
         ${PICO_SDK_PATH}/src/rp2_common/pico_flash/include
         ${PICO_SDK_PATH}/src/rp2040/hardware_regs/include
