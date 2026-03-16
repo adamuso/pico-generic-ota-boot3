@@ -75,6 +75,7 @@ Note: The following items are not listed by priority.
 - [ ] Fix a known issue where the checksum and program size are not injected on the first build; currently, a second build is sometimes required for correct injection.
 - [ ] Add support for triggering a bootloader update via a watchdog scratch register, allowing the user to explicitly control whether an update should occur after reboot (currently, an update is always performed if the checksum differs)
 - [ ] What is the expected behavior if both the current and pending states are invalid?
+- [ ] Optimize bootloader code to reduce its flash size (we are already using >80% of 4kB)
 
 ---
 

@@ -26,6 +26,9 @@
 extern void boot3_flash_range_erase(uint32_t flash_offs, size_t count);
 extern void boot3_flash_range_program(uint32_t flash_offs, const uint8_t *data, size_t count);
 
+extern void boot3_xosc_init(void);
+extern bool boot3_clock_configure_12mhz(clock_handle_t clock, uint32_t src, uint32_t auxsrc);
+
 uint64_t in_boot3_section boot3_internal_fnv1a_64(const uint8_t *data, size_t len) {
     uint64_t hash = FNV1A_64_OFFSET_BASIS;
     for (size_t i = 0; i < len; ++i) {
@@ -278,52 +281,23 @@ void in_boot3_section boot3_gpio_set_function(uint gpio, gpio_function_t fn) {
 #endif
 }
 
-#if XOSC_HZ < (1 * MHZ) || XOSC_HZ > (50 * MHZ)
-// Note: Although an external clock can be supplied up to 50 MHz, the maximum frequency the
-// XOSC cell is specified to work with a crystal is less, please see the appropriate RP-series datasheet.
-#error XOSC_HZ must be in the range 1,000,000-50,000,000 i.e. 1-50MHz XOSC frequency
-#endif
-
-#define STARTUP_DELAY ((((XOSC_HZ / KHZ) + 128) / 256) * PICO_XOSC_STARTUP_DELAY_MULTIPLIER)
-
-// The DELAY field in xosc_hw->startup is 14 bits wide.
-#if STARTUP_DELAY >= (1 << 13)
-#error PICO_XOSC_STARTUP_DELAY_MULTIPLIER is too large: XOSC STARTUP.DELAY must be < 8192 
-#endif
-
 void in_boot3_section boot3_main(void) 
 {
     boot3_internal_copyout();
 
 #if BOOT3_ENABLE_XOSC
-    // Assumes 1-15 MHz input.
-    xosc_hw->ctrl = XOSC_CTRL_FREQ_RANGE_VALUE_1_15MHZ;
+    boot3_xosc_init();
 
-    // Set xosc startup delay
-    xosc_hw->startup = STARTUP_DELAY;
-
-    // Set the enable bit now that we have set freq range and startup delay
-    hw_set_bits(&xosc_hw->ctrl, XOSC_CTRL_ENABLE_VALUE_ENABLE << XOSC_CTRL_ENABLE_LSB);
-
-    // Wait for XOSC to be stable
-    while(!(xosc_hw->status & XOSC_STATUS_STABLE_BITS)) {
-        tight_loop_contents();
-    }
-
-    clock_configure(
+    boot3_clock_configure_12mhz(
         clk_ref,
         CLOCKS_CLK_REF_CTRL_SRC_VALUE_XOSC_CLKSRC,
-        0,
-        12 * MHZ,
-        12 * MHZ
+        0
     );
 
-    clock_configure(
+    boot3_clock_configure_12mhz(
         clk_sys,
         CLOCKS_CLK_SYS_CTRL_SRC_VALUE_CLK_REF,
-        0, 
-        12 * MHZ,
-        12 * MHZ
+        0
     );
 #endif
 

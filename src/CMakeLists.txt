@@ -5,6 +5,7 @@ add_library(boot3_image OBJECT
     boot3_internal.c
     boot3_state.c
     boot3_flash.c
+    boot3_xosc.c
     $<IF:$<BOOL:${BOOT3_WS2812_ENABLE}>,boot3_ws2812.c,>
 )
 
