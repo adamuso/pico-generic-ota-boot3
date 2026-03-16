@@ -23,8 +23,8 @@ struct Boot3StatePrelude
 
 struct Boot3StateConfig
 {
-    uint32_t version_minor;
     uint32_t version_major;
+    uint32_t version_minor;
     uint8_t* flash_binary_start;
     uint8_t* flash_binary_end;
     bool (*should_update)(bool checksum_mismatch);
@@ -105,6 +105,10 @@ bool boot3_validate_state(const struct Boot3State* state);
 
 /// @brief Request a reboot to apply the pending update. This function will not return, as the device will reboot immediately after calling this function.
 void __attribute__((noreturn)) boot3_reboot_request_update();
+
+/// @brief Check if an update has been requested.
+/// @return true if an update has been requested, false otherwise
+bool boot3_update_requested();
 
 /// @brief Determine if the program should be updated. This is a weak function that can be overridden by the user to provide 
 /// custom logic for determining whether to apply the pending state. When no function is provided by the user, the default behavior

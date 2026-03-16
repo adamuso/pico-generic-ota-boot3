@@ -21,11 +21,15 @@ struct Boot3UserData
 };
 
 struct Boot3UserData in_boot3_user_data boot3_user_data = {
-    .version = 4,
+    .version = 1,
 };
 
 bool boot3_should_update(bool checksum_mismatch) 
 {
+    if (!boot3_update_requested()) {
+        return false;
+    }
+
     struct Boot3UserData* current = (struct Boot3UserData*)boot3_get_current_state()->user_data;
     struct Boot3UserData* pending = (struct Boot3UserData*)boot3_get_pending_state()->user_data;
 
@@ -144,8 +148,7 @@ int main(void) {
     internal_ws2812_reset();
     internal_ws2812_transmit(128, 0, 0);
 
-    watchdog_enable(0, true);
-    // rom_reset_usb_boot(0, 0);
+    boot3_reboot_request_update();
 
     for(;;) {
         tight_loop_contents();

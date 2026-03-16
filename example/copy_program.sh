@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cat build/bare_blink.bin > /dev/ttyACM0
+cat build/example_serial_ota.bin > /dev/ttyACM0

@@ -52,3 +52,8 @@ void __attribute__((noreturn)) boot3_reboot_request_update()
     watchdog_reboot(0, 0, 0);
     for (;;) tight_loop_contents();
 }
+
+bool boot3_update_requested()
+{
+    return watchdog_hw->scratch[0] == BOOT3_STATE_MAGIC;
+}
