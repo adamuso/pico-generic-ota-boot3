@@ -23,6 +23,8 @@ struct Boot3StatePrelude
 
 struct Boot3StateConfig
 {
+    uint32_t version_minor;
+    uint32_t version_major;
     uint8_t* flash_binary_start;
     uint8_t* flash_binary_end;
     bool (*should_update)(bool checksum_mismatch);
@@ -39,7 +41,11 @@ struct Boot3StateCopyProgress
 struct Boot3StateInternalData
 {
     struct Boot3StateConfig config;
-    char padding[1024 - sizeof(struct Boot3StateConfig) - sizeof(struct Boot3StatePrelude)];
+    char padding[1024 - sizeof(struct Boot3StateConfig) - sizeof(struct Boot3StatePrelude) - sizeof(int)];
+    // This has to be the last field in the struct. This is the last thing that will be copied from pending state to current state.
+    // And when that happens the update is complete.
+    // When this field is 0xffffffff the update is not complete.
+    int update_state;
 };
 
 static_assert(
