@@ -99,8 +99,8 @@ static void in_boot3_critical_section boot3_internal_copy_pending_to_current_and
     uint32_t ints = save_and_disable_interrupts();
     uint32_t flash_to_erase = (pending_state->prelude.program_size - 1) / FLASH_SECTOR_SIZE + 1; // Round up to nearest flash sector
 
-    // Erase the current state by erasing the first half of the flash.
-    boot3_flash_range_erase(8192, flash_to_erase * FLASH_SECTOR_SIZE);
+    // Erase current_state area. This marks the beggining of the update process. Also erase the current program by erasing the first half of the flash.
+    boot3_flash_range_erase(FLASH_SECTOR_SIZE, flash_to_erase * FLASH_SECTOR_SIZE + FLASH_SECTOR_SIZE);
     
     const uint8_t* pending_program = (const uint8_t *)XIP_BASE + PICO_FLASH_SIZE_BYTES / 2 + FLASH_SECTOR_SIZE * 2; 
 
@@ -152,14 +152,12 @@ static void in_boot3_critical_section boot3_internal_copy_pending_to_current_and
 
     volatile const uint8_t* pending_state_bytes = (volatile const uint8_t*)pending_state;
 
-    // Erase current_state area and copy new state from pending_state. This is safe even if the power is lost in the middle of the process.
+    // Copy new state from pending_state. This is safe even if the power is lost in the middle of the process.
     // When power is back, if the state copy is not complete, the pending state will still be valid (since we haven't erased it), but the checksum of
     // current_state won't match, this will cause retry of the copy process until it is complete. 
-    boot3_flash_range_erase(FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
-
     boot3_status_led_set(0);
 
-    for (size_t i = 0; i < sizeof(struct Boot3State); i += sizeof(buffer)) {
+    for (size_t i = 0; i < sizeof(struct Boot3State) - sizeof(struct Boot3StateCopyProgress); i += sizeof(buffer)) {
         // Copy a chunk of the pending state from flash to RAM buffer
         boot3_internal_memcpy(pending_state_bytes + i, buffer, sizeof(buffer));
 
@@ -204,6 +202,10 @@ void in_boot3_section boot3_internal_check_state()
 
     boot3_status_led_set(1);
 
+    bool in_the_middle_of_update = current_state->prelude.magic == 0xffffffff || 
+        current_state->prelude.checksum == 0xffffffffffffffff || 
+        current_state->data.update_state == 0xffffffff;
+
     // When current state is invalid, we need to try recover from the second slot if possible
     bool current_state_valid = current_state->prelude.magic == BOOT3_STATE_MAGIC && 
         current_state->prelude.checksum == boot3_internal_fnv1a_64(&__boot3_end, current_state->prelude.program_size);
@@ -232,6 +234,33 @@ void in_boot3_section boot3_internal_check_state()
     }
 #endif
 
+    bool disallow_recovery = false;
+
+    if (!current_state_valid && !in_the_middle_of_update) 
+    {
+        // Can we allow recovering from unknown source? If this state was provided by us earlier then it is safe.
+        // But if some other program was injected then it is not.
+        
+        // We need to protect against the attack were someone flashes a malicious program on second slot and then
+        // breaks current state to force apply it even if user should_update function does not want to apply it.
+        // If user want to block the update we should make sure that there is no way around it.
+
+        // The user might implement authentication in should_update function, and return false if the pending program 
+        // is not authenticated, but if the attacker could break the current state to make it invalid, then the bootloader 
+        // would try to recover from pending state even if should_update returns false, because the current state is invalid.
+
+        // So by default we disable recovery when we do not know what pending state is.
+        // Remember that this only happens when WE ARE NOT in the middle of the update and current state is invalid.
+        // Recovering from interrupted update still works as expected. 
+        disallow_recovery = true;
+
+        if (current_state->prelude.checksum == pending_state->prelude.checksum)
+        {
+            // In this case we have the same program that was before in pending, so we can recover
+            disallow_recovery = false;
+        }
+    }
+
     // Pending state is valid when:
     // - It has the correct magic value
     // - Its program size is not larger than half of the flash size (since we store the pending state 
@@ -245,7 +274,7 @@ void in_boot3_section boot3_internal_check_state()
         pending_state->prelude.magic == BOOT3_STATE_MAGIC && 
         pending_state->prelude.program_size <= (uint32_t)(PICO_FLASH_SIZE_BYTES / 2) - 8192 &&
         pending_state->prelude.program_size > 0 && 
-        (should_update || !current_state_valid)
+        (should_update || (!current_state_valid && !disallow_recovery))
     ) {
         // When pending state is valid, calculate the checksum of the pending state program, 
         // and if it matches the checksum in the prelude, copy the pending state to the current state to apply it.
@@ -259,6 +288,21 @@ void in_boot3_section boot3_internal_check_state()
             boot3_internal_copy_pending_to_current_and_exit();
             for (;;) tight_loop_contents();
         }
+    }
+
+    if (!current_state_valid)
+    {
+        // Hang because what else we can do?
+        // Signal state recovery failure by lighting up the program LED if available, and keeping the status LED off.
+        boot3_status_led_set(0);
+        boot3_program_led_set(1);
+
+#if BOOT3_WS2812_ENABLE && defined(BOOT3_WS2812_GPIO_PIN)
+        // Purple color to indicate recovery failure
+        boot3_ws2812_reset(BOOT3_WS2812_GPIO_PIN);
+        boot3_ws2812_transmit(BOOT3_WS2812_GPIO_PIN, 128, 0, 128); 
+#endif
+        for (;;) tight_loop_contents();
     }
 
     boot3_status_led_set(0);
