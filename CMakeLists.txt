@@ -117,7 +117,7 @@ function(pico_boot3_init TARGET)
     # custom command that depends on the .bin (so it runs after the .bin is
     # generated), and a custom target to include the checksum generation in the
     # default build.
-    set(_flash_bin "${CMAKE_BINARY_DIR}/${TARGET}.bin")
+    set(_flash_bin "${CMAKE_BINARY_DIR}/${TARGET}_boot3.bin")
     set(_flash_checksum "${CMAKE_BINARY_DIR}/${TARGET}_checksum.bin")
     set(_flash_program_size "${CMAKE_BINARY_DIR}/${TARGET}_program_size.bin")
   
@@ -137,7 +137,7 @@ function(pico_boot3_init TARGET)
 
     add_custom_command(
         TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${TARGET}> ${_flash_bin}
+        COMMAND ${CMAKE_OBJCOPY} -Obinary --remove-section .boot3_slot_state $<TARGET_FILE:${TARGET}> ${_flash_bin}
         COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2000 > ${_flash_checksum}
         COMMAND ${BOOT3_FNV1A_HOST} ${_flash_bin} 0x2000 calc > ${_flash_program_size}
         COMMAND ${CMAKE_OBJCOPY} --update-section .boot3_state_checksum=${_flash_checksum} --update-section .boot3_state_program_size=${_flash_program_size} $<TARGET_FILE:${TARGET}>
