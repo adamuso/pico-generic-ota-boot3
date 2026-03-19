@@ -63,6 +63,10 @@
         ASSERT(__boot3_progress_end__ - __boot3_progress_start__ <= 2048, "boot3 copy flash progress exceeds 2KiB");
     } > FLASH
 
+    .boot3_slot_state : {
+        KEEP(*(.boot3_slot_state))
+    } > FLASH_SLOT
+
     . = __boot3_start__ + 8192 - 256;
     PROVIDE(__boot3_end = .);
 

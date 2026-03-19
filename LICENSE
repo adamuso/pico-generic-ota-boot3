@@ -25,9 +25,9 @@ SOFTWARE.
 THIRD-PARTY COMPONENTS
 ======================
 
-Portions of src/boot3_flash.c are derived from the Raspberry Pi Pico SDK
-(src/rp2_common/hardware_flash/flash.c). The original license for those
-portions is reproduced below.
+Portions of src/boot3_flash.c, src/boot_xosc.c are derived from the Raspberry Pi Pico SDK
+(src/rp2_common/hardware_flash/flash.c, src/rp2_common/hardware_xosc/xosc.c). 
+The original license for those portions is reproduced below.
 
 BSD 3-Clause License
 

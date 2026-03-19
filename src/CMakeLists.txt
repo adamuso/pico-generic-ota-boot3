@@ -4,6 +4,7 @@ add_library(boot3_image OBJECT
     boot3.c
     boot3_internal.c
     boot3_state.c
+    boot3_slot_state.c
     boot3_flash.c
     boot3_xosc.c
     $<IF:$<BOOL:${BOOT3_WS2812_ENABLE}>,boot3_ws2812.c,>
@@ -57,6 +58,7 @@ target_compile_definitions(boot3_image PRIVATE
     BOOT3_AUTO_UPDATE=$<BOOL:${BOOT3_AUTO_UPDATE}>
     BOOT3_WS2812_ENABLE=$<BOOL:${BOOT3_WS2812_ENABLE}>
     BOOT3_STATUS_ENABLE=$<BOOL:${BOOT3_STATUS_ENABLE}>
+    BOOT3_CLEAR_PENDING_STATE=$<BOOL:${BOOT3_CLEAR_PENDING_STATE}>
     $<IF:$<BOOL:${BOOT3_WS2812_GPIO}>,BOOT3_WS2812_GPIO=${BOOT3_WS2812_GPIO},>
     $<IF:$<BOOL:${BOOT3_STATUS_LED_GPIO}>,BOOT3_STATUS_LED_GPIO=${BOOT3_STATUS_LED_GPIO},>
     $<IF:$<BOOL:${BOOT3_PROGRAM_LED_GPIO}>,BOOT3_PROGRAM_LED_GPIO=${BOOT3_PROGRAM_LED_GPIO},>

@@ -11,6 +11,7 @@ project(rp2040_boot3 C CXX ASM)
 # Option to control injection (on by default)
 option(BOOT3_INJECT_MEMMAP "Inject .boot3 section into pico SDK memmap_default.ld" ON)
 option(BOOT3_AUTO_UPDATE "Enable automatic update of the flash when a new pending firmware is available. When disabled, the update must be triggered manually" ON)
+option(BOOT3_CLEAR_PENDING_STATE "Clear pending state when flashing from uf2" OFF)
 option(BOOT3_WS2812_ENABLE "Enable WS2812 support in .boot3" OFF)
 option(BOOT3_STATUS_ENABLE "Enable status/program LED support in .boot3" OFF)
 set(BOOT3_WS2812_GPIO "" CACHE STRING "GPIO number for WS2812 data line (PICO_DEFAULT_WS2812_PIN used if not set)")
@@ -33,6 +34,8 @@ set(BOOT3_MEMMAP_GENERATED "${CMAKE_BINARY_DIR}/boot3_memmap.ld")
 
 if(BOOT3_INJECT_MEMMAP)
     if(EXISTS ${BOOT3_MEMMAP_PATH})
+        set(PICO_FLASH_SIZE_BYTES "${PICO_FLASH_SIZE_BYTES} / 2")
+
         file(READ "${BOOT3_MEMMAP_PATH}" _mem)
 
         # Insert a .boot3 section immediately before the .text section
@@ -50,13 +53,14 @@ if(BOOT3_INJECT_MEMMAP)
 
         string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
 
-        if(NOT "${_mem}" STREQUAL "${_new_mem}")
-            # write modified file into build dir (non-invasive)
-            file(WRITE "${BOOT3_MEMMAP_GENERATED}" "${_new_mem}")
-            message(STATUS "Generated injected memmap at ${BOOT3_MEMMAP_GENERATED} (pico-sdk left unchanged)")
-        else()
-            message(STATUS "No injection needed; .boot3 already present or insertion point not found in ${BOOT3_MEMMAP_PATH}")
-        endif()
+        set(_pattern "\n    INCLUDE \"pico_flash_region.ld\"\n")
+        set(_replace "\n    INCLUDE \"pico_flash_region.ld\"\n    FLASH_SLOT(rx) : ORIGIN = 0x10000000 + ${PICO_FLASH_SIZE_BYTES}, LENGTH = ${PICO_FLASH_SIZE_BYTES}\n")
+
+        string(REPLACE "${_pattern}" "${_replace}" _new_mem "${_new_mem}")
+
+        # write modified file into build dir (non-invasive)
+        file(WRITE "${BOOT3_MEMMAP_GENERATED}" "${_new_mem}")
+        message(STATUS "Generated injected memmap at ${BOOT3_MEMMAP_GENERATED} (pico-sdk left unchanged)")
     else()
         message(FATAL_ERROR "Base memmap file not found at ${BOOT3_MEMMAP_PATH}; skipping .boot3 generation")
     endif()
