@@ -6,5 +6,5 @@
 #include "hardware/flash.h"
 
 #if BOOT3_CLEAR_PENDING_STATE
-const uint8_t boot3_checksum[FLASH_SECTOR_SIZE * 2] __attribute__((section(".boot3_slot_state"))) = { [0 ... FLASH_SECTOR_SIZE * 2 - 1] = 0xFF };
+static const uint8_t boot3_slot_state_clear[FLASH_SECTOR_SIZE * 2] __attribute__((section(".boot3_slot_state"))) = { [0 ... FLASH_SECTOR_SIZE * 2 - 1] = 0xFF };
 #endif
