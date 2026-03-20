@@ -41,8 +41,9 @@ pico_boot3_init(my_firmware)
 |---|---|---|
 | `BOOT3_INJECT_MEMMAP` | `ON` | Generate an injected `memmap_default.ld` with the `.boot3` section. Disable only if managing the linker script manually. |
 | `BOOT3_AUTO_UPDATE` | `ON` | Automatically update firmware from pending state if checksum is different. When disabled update is only tried to be installed when user request it. |
-| `BOOT3_WS2812_ENABLE` | `OFF` | Compile WS2812 LED driver into boot3. LED feedback during update. |
-| `BOOT3_STATUS_ENABLE` | `OFF` | Enable status/program LED GPIOs during boot. |
+| `BOOT3_CLEAR_PENDING_STATE` | `OFF` | Inserts empty data into the pending state during the linking process to clear it. This prevents an automatic update immediately after flashing new firmware. Enable this option if you want to flash a new program without triggering the auto-update mechanism. |
+| `BOOT3_WS2812_ENABLE` | `OFF` | Includes the WS2812 LED driver in boot3 for LED feedback during updates. |
+| `BOOT3_STATUS_ENABLE` | `OFF` | Enables status and programming LED GPIOs during boot. |
 | `BOOT3_WS2812_GPIO` | *(empty)* | GPIO pin for WS2812 data. Falls back to `PICO_DEFAULT_WS2812_PIN`. |
 | `BOOT3_STATUS_LED_GPIO` | *(empty)* | GPIO for status LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
 | `BOOT3_PROGRAM_LED_GPIO` | *(empty)* | GPIO for programming-in-progress LED. Falls back to `PICO_DEFAULT_LED_PIN`. |
